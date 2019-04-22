@@ -1,5 +1,6 @@
 data/
 experiments/
+venv/
 
 *.pyc
 .idea/
