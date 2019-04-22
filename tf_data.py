@@ -59,7 +59,7 @@ class Dataset(object):
             print("Meta-data not found.")
             return False
         else:
-            return np.load(meta_data_path)['stats'].tolist()
+            return np.load(meta_data_path, allow_pickle=True)['stats'].tolist()
 
     def tf_data_transformations(self):
         """Loads the raw data and applies some pre-processing."""
