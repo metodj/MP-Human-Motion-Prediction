@@ -1,7 +1,0 @@
-data/
-experiments/
-venv/
-
-*.pyc
-.idea/
-__pycache__/
