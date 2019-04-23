@@ -16,6 +16,11 @@ import json
 import numpy as np
 import tensorflow as tf
 
+# RS
+import datetime
+import sys
+# RS
+
 import tf_models as models
 from tf_data import TFRecordMotionDataset
 from constants import Constants as C
@@ -49,7 +54,12 @@ parser.add_argument("--experiment_name", type=str, default=None, help="A descrip
 
 
 ARGS = parser.parse_args()
-EXPERIMENT_TIMESTAMP = str(int(time.time()))
+# EXPERIMENT_TIMESTAMP = str(int(time.time()))
+
+# RS
+EXPERIMENT_TIMESTAMP = datetime.datetime.now().strftime("%d_%H-%M")
+LOG_FILE = "./logs/log_" + EXPERIMENT_TIMESTAMP
+# RS
 
 
 def create_model(session):
@@ -325,5 +335,13 @@ def train():
         print("Training Finished.")
 
 
+# RS
+sys.stdout = open(LOG_FILE, "w")
+# RS
+
 if __name__ == "__main__":
     train()
+
+    # RS
+    sys.stdout.close()
+    # RS
