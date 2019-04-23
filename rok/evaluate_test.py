@@ -16,6 +16,11 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
+# RS
+import sys
+import datetime
+# RS
+
 import tf_models as models
 from tf_data import TFRecordMotionDataset
 from constants import Constants as C
@@ -167,6 +172,12 @@ def evaluate(experiment_dir, args):
                 visualizer.visualize(eval_result[k][1], eval_result[k][0], title=k)
 
 
+# RS
+EXPERIMENT_TIMESTAMP = datetime.datetime.now().strftime("%d_%H-%M")
+LOG_FILE = "./logs/log_" + EXPERIMENT_TIMESTAMP
+sys.stdout = open(LOG_FILE, "w")
+# RS
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', required=True, type=str, default="./data", help='Where the data is stored.')
@@ -183,4 +194,8 @@ if __name__ == '__main__':
         raise Exception("Model " + str(args.model_id) + " is not found in " + str(args.save_dir))
 
     evaluate(experiment_dir, args)
+
+    # RS
+    sys.stdout.close()
+    # RS
 
