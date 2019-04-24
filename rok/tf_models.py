@@ -186,7 +186,7 @@ class DummyModel(BaseModel):
         if self.input_hidden_size is not None:
             with tf.variable_scope("input_layer", reuse=self.reuse):
                 self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                     tf.nn.relu, self.reuse)
+                                                     tf.nn.relu, reuse=self.reuse)
         else:
             self.inputs_hidden = self.prediction_inputs
 
