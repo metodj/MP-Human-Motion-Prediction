@@ -84,12 +84,12 @@ class BaseModel(object):
 
         with tf.name_scope("loss"):
             # Mean joint angle difference
-            # metrics = self.metrics_engine.compute(predictions_pose, targets_pose)
-            # self.loss = metrics["joint_angle"]
+            metrics = self.metrics_engine.compute(predictions_pose, targets_pose)
+            self.loss = metrics["joint_angle"]
 
             # MSE
-            diff = targets_pose - predictions_pose
-            self.loss = tf.reduce_mean(tf.square(diff))
+            # diff = targets_pose - predictions_pose
+            # self.loss = tf.reduce_mean(tf.square(diff))
 
     def optimization_routines(self):
         """Add an optimizer."""
