@@ -247,11 +247,12 @@ class DummyModel(BaseModel):
                            self.rnn_state,
                            self.rnn_outputs,
                            self.prediction_representation,
-                           self.outputs
+                           self.outputs,
+                           self.global_step
                            ]
             outputs = session.run(output_feed)
 
-            if self.global_step < 3:
+            if outputs[15] < 3:
                 print("data_inputs", outputs[4].shape)
                 print("data_targets", outputs[5].shape)
                 print("data_seq_len", outputs[6].shape)
