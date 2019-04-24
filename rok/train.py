@@ -242,7 +242,7 @@ def get_rmodel_v1_config(args):
     config['batch_size'] = args.batch_size
     config['activation_fn'] = args.activation_fn
 
-    model_cls = models.RModelV1
+    model_cls = models.DummyModel
 
     # Create an experiment name that summarizes the configuration.
     # It will be used as part of the experiment folder name.
