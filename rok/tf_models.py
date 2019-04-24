@@ -257,7 +257,6 @@ class DummyModel(BaseModel):
                            self.prediction_representation,
                            self.outputs,
                            self.global_step,
-                           self.target_seq_len
                            ]
             outputs = session.run(output_feed)
 
@@ -274,8 +273,8 @@ class DummyModel(BaseModel):
                 print("rnn_outputs", outputs[12].shape)
                 print("prediction_representation", outputs[13].shape)
                 print("outputs", outputs[14].shape)
-                print("predictions_pose", outputs[14][:, -outputs[16]:, :].shape)
-                print("targets_pose", outputs[9][:, -outputs[16]:, :].shape)
+                print("predictions_pose", outputs[14][:, -self.target_seq_len:, :].shape)
+                print("targets_pose", outputs[9][:, -self.target_seq_len:, :].shape)
 
             return outputs[0], outputs[1], outputs[2]
         else:
