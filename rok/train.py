@@ -97,8 +97,9 @@ def create_model(session):
                                            extract_random_windows=True,
                                            num_parallel_calls=16)
         train_pl = train_data.get_tf_samples()
-        print("train_pl:\t", str(type(train_pl)), "\t", "shape: " + str(tf.shape(train_pl)), "\t",
-              "get_shape: " + str(train_pl.get_shape()))
+        # print("train_pl:\t", str(type(train_pl)), "\t", "shape: " + str(tf.shape(train_pl)), "\t",
+        #       "get_shape: " + str(train_pl.get_shape()))
+        print("train_pl:\t", str(type(train_pl)), "\t", "shape: " + str(tf.shape(train_pl)))
 
     # Load validation data.
     with tf.name_scope("validation_data"):
@@ -110,8 +111,8 @@ def create_model(session):
                                            extract_random_windows=False,
                                            num_parallel_calls=16)
         valid_pl = valid_data.get_tf_samples()
-        print("valid_pl:\t", str(type(valid_pl)), "\t", "shape: " + str(tf.shape(valid_pl)), "\t",
-              "get_shape: " + str(valid_pl.get_shape()))
+        # print("valid_pl:\t", str(type(valid_pl)), "\t", "shape: " + str(tf.shape(valid_pl)), "\t",
+        #       "get_shape: " + str(valid_pl.get_shape()))
 
     # Create the training model.
     with tf.name_scope(C.TRAIN):

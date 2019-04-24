@@ -73,10 +73,10 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
-        print("targets_pose\t", "shape: " + str(tf.shape(targets_pose)), "\t",
-              "get_shape: " + str(targets_pose.get_shape()))
-        print("predictions_pose\t", "shape: " + str(tf.shape(predictions_pose)), "\t",
-              "get_shape: " + str(predictions_pose.get_shape()))
+        # print("targets_pose\t", "shape: " + str(tf.shape(targets_pose)), "\t",
+        #       "get_shape: " + str(targets_pose.get_shape()))
+        # print("predictions_pose\t", "shape: " + str(tf.shape(predictions_pose)), "\t",
+        #       "get_shape: " + str(predictions_pose.get_shape()))
 
         # Use MSE loss.
         with tf.name_scope("loss"):
@@ -165,9 +165,9 @@ class DummyModel(BaseModel):
         self.prediction_targets = self.data_inputs[:, 1:, :]  # The target poses for every time step.
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]), dtype=tf.int32)*self.sequence_length
 
-        print("prediction_inputs:\t", str(type(self.prediction_inputs)), "\t",
-              "shape: " + str(tf.shape(self.prediction_inputs)), "\t",
-              "get_shape: " + str(self.prediction_inputs.get_shape()))
+        # print("prediction_inputs:\t", str(type(self.prediction_inputs)), "\t",
+        #       "shape: " + str(tf.shape(self.prediction_inputs)), "\t",
+        #       "get_shape: " + str(self.prediction_inputs.get_shape()))
 
         # Sometimes the batch size is available at compile time.
         self.tf_batch_size = self.prediction_inputs.shape.as_list()[0]
@@ -340,9 +340,9 @@ class RModelV1(BaseModel):
         self.prediction_targets = self.data_inputs[:, 1:, :]  # The target poses for every time step.
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]), dtype=tf.int32)*self.sequence_length
 
-        print("prediction_inputs:\t", str(type(self.prediction_inputs)), "\t",
-              "shape: " + str(tf.shape(self.prediction_inputs)), "\t",
-              "get_shape: " + str(self.prediction_inputs.get_shape()))
+        # print("prediction_inputs:\t", str(type(self.prediction_inputs)), "\t",
+        #       "shape: " + str(tf.shape(self.prediction_inputs)), "\t",
+        #       "get_shape: " + str(self.prediction_inputs.get_shape()))
 
         # Sometimes the batch size is available at compile time.
         self.tf_batch_size = self.prediction_inputs.shape.as_list()[0]
