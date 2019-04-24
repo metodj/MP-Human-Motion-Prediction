@@ -84,12 +84,12 @@ class BaseModel(object):
 
         with tf.name_scope("loss"):
             # Mean joint angle difference
-            metrics = self.metrics_engine.compute(predictions_pose, targets_pose)
-            self.loss = metrics["joint_angle"]
+            # metrics = self.metrics_engine.compute(predictions_pose, targets_pose)
+            # self.loss = metrics["joint_angle"]
 
             # MSE
-            # diff = targets_pose - predictions_pose
-            # self.loss = tf.reduce_mean(tf.square(diff))
+            diff = targets_pose - predictions_pose
+            self.loss = tf.reduce_mean(tf.square(diff))
 
     def optimization_routines(self):
         """Add an optimizer."""
@@ -256,9 +256,13 @@ class DummyModel(BaseModel):
                            self.rnn_outputs,
                            self.prediction_representation,
                            self.outputs,
-                           self.global_step
+                           self.global_step,
+                           self.target_seq_len
                            ]
             outputs = session.run(output_feed)
+
+            predictions_pose = self.outputs[:, -self.target_seq_len:, :]
+            targets_pose = self.prediction_targets[:, -self.target_seq_len:, :]
 
             if outputs[15] < 3:
                 print("\n")
@@ -273,6 +277,8 @@ class DummyModel(BaseModel):
                 print("rnn_outputs", outputs[12].shape)
                 print("prediction_representation", outputs[13].shape)
                 print("outputs", outputs[14].shape)
+                print("predictions_pose", outputs[14][:, -outputs[16]:, :].shape)
+                print("targets_pose", outputs[9][:, -outputs[16]:, :].shape)
 
             return outputs[0], outputs[1], outputs[2]
         else:
