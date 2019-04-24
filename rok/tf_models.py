@@ -250,17 +250,19 @@ class DummyModel(BaseModel):
                            self.outputs
                            ]
             outputs = session.run(output_feed)
-            print("data_inputs", outputs[4])
-            print("data_targets", outputs[5])
-            print("data_seq_len", outputs[6])
-            print("data_ids", outputs[7])
-            print("prediction_inputs", outputs[8])
-            print("prediction_targets", outputs[9])
-            print("inputs_hidden", outputs[10])
-            print("rnn_state", outputs[11])
-            print("rnn_outputs", outputs[12])
-            print("prediction_representation", outputs[13])
-            print("outputs", outputs[14])
+
+            if self.global_step < 3:
+                print("data_inputs", outputs[4].shape)
+                print("data_targets", outputs[5].shape)
+                print("data_seq_len", outputs[6].shape)
+                print("data_ids", outputs[7].shape)
+                print("prediction_inputs", outputs[8].shape)
+                print("prediction_targets", outputs[9].shape)
+                print("inputs_hidden", outputs[10].shape)
+                print("rnn_state", outputs[11].shape)
+                print("rnn_outputs", outputs[12].shape)
+                print("prediction_representation", outputs[13].shape)
+                print("outputs", outputs[14].shape)
 
             return outputs[0], outputs[1], outputs[2]
         else:
@@ -395,13 +397,15 @@ class RModelV1(BaseModel):
         """Create recurrent cell."""
         with tf.variable_scope("rnn_cell", reuse=self.reuse):
             if self.cell_type == C.LSTM:
-                cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
             elif self.cell_type == C.GRU:
-                cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
-            self.cell = cell
+            cells = tf.nn.rnn_cell.MultiRNNCell([cell] * 3, state_is_tuple=True)
+
+            self.cell = cells
 
     def build_network(self):
         """Build the core part of the model."""
