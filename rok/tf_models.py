@@ -261,9 +261,6 @@ class DummyModel(BaseModel):
                            ]
             outputs = session.run(output_feed)
 
-            predictions_pose = self.outputs[:, -self.target_seq_len:, :]
-            targets_pose = self.prediction_targets[:, -self.target_seq_len:, :]
-
             if outputs[15] < 3:
                 print("\n")
                 print("data_inputs", outputs[4].shape)
