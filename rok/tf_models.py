@@ -73,6 +73,11 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
+        print("targets_pose\t", "shape: " + str(tf.shape(targets_pose)), "\t",
+              "get_shape: " + str(targets_pose.get_shape()))
+        print("predictions_pose\t", "shape: " + str(tf.shape(predictions_pose)), "\t",
+              "get_shape: " + str(predictions_pose.get_shape()))
+
         # Use MSE loss.
         with tf.name_scope("loss"):
             diff = targets_pose - predictions_pose
@@ -81,7 +86,8 @@ class BaseModel(object):
     def optimization_routines(self):
         """Add an optimizer."""
         # Use a simple SGD optimizer.
-        optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
+        # optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
 
         # Gradients and update operation for training the model.
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -143,8 +149,8 @@ class DummyModel(BaseModel):
         self.input_hidden_size = self.config.get("input_hidden_size")
 
         # Prepare some members that need to be set when creating the graph.
-        self.cell = None  # The recurrent cell.
-        self.initial_states = None  # The intial states of the RNN.
+        self.cell = None  # The recurrent cell. Defined in build_cell.
+        self.initial_states = None  # The intial states of the RNN. Defined in build_network.
         self.rnn_outputs = None  # The outputs of the RNN layer.
         self.rnn_state = None  # The final state of the RNN layer.
         self.inputs_hidden = None  # The inputs to the recurrent cell.
@@ -158,6 +164,10 @@ class DummyModel(BaseModel):
         self.prediction_inputs = self.data_inputs[:, :-1, :]  # Pose input.
         self.prediction_targets = self.data_inputs[:, 1:, :]  # The target poses for every time step.
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]), dtype=tf.int32)*self.sequence_length
+
+        print("prediction_inputs:\t", str(type(self.prediction_inputs)), "\t",
+              "shape: " + str(tf.shape(self.prediction_inputs)), "\t",
+              "get_shape: " + str(self.prediction_inputs.get_shape()))
 
         # Sometimes the batch size is available at compile time.
         self.tf_batch_size = self.prediction_inputs.shape.as_list()[0]
@@ -277,7 +287,6 @@ class DummyModel(BaseModel):
             session: Tensorflow session object.
             seed_sequence: A tensor of shape (batch_size, seq_len, feature_size)
             prediction_steps: How many frames to predict into the future.
-            **kwargs:
         Returns:
             Prediction with shape (batch_size, prediction_steps, feature_size)
         """
@@ -300,3 +309,180 @@ class DummyModel(BaseModel):
             state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
             predictions.append(prediction)
         return np.concatenate(predictions, axis=1)
+
+
+class RModelV1(BaseModel):
+    """
+    First Model.
+    """
+    def __init__(self, config, data_pl, mode, reuse, **kwargs):
+        super(RModelV1, self).__init__(config, data_pl, mode, reuse, **kwargs)
+
+        # Extract some config parameters specific to this model
+        self.cell_type = self.config["cell_type"]
+        self.cell_size = self.config["cell_size"]
+        self.input_hidden_size = self.config.get("input_hidden_size")
+
+        # Prepare some members that need to be set when creating the graph.
+        self.cell = None  # The recurrent cell.
+        self.initial_states = None  # The intial states of the RNN.
+        self.rnn_outputs = None  # The outputs of the RNN layer.
+        self.rnn_state = None  # The final state of the RNN layer.
+        self.inputs_hidden = None  # The inputs to the recurrent cell.
+
+        # How many steps we must predict.
+        if self.is_training:
+            self.sequence_length = self.source_seq_len + self.target_seq_len - 1
+        else:
+            self.sequence_length = self.target_seq_len
+
+        self.prediction_inputs = self.data_inputs[:, :-1, :]  # Pose input.
+        self.prediction_targets = self.data_inputs[:, 1:, :]  # The target poses for every time step.
+        self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]), dtype=tf.int32)*self.sequence_length
+
+        print("prediction_inputs:\t", str(type(self.prediction_inputs)), "\t",
+              "shape: " + str(tf.shape(self.prediction_inputs)), "\t",
+              "get_shape: " + str(self.prediction_inputs.get_shape()))
+
+        # Sometimes the batch size is available at compile time.
+        self.tf_batch_size = self.prediction_inputs.shape.as_list()[0]
+        if self.tf_batch_size is None:
+            # Sometimes it isn't. Use the dynamic shape instead.
+            self.tf_batch_size = tf.shape(self.prediction_inputs)[0]
+
+    def build_input_layer(self):
+        """
+        Here we can do some stuff on the inputs before passing them to the recurrent cell. The processed inputs should
+        be stored in `self.inputs_hidden`.
+        """
+        # We could e.g. pass them through a dense layer
+        if self.input_hidden_size is not None:
+            with tf.variable_scope("input_layer", reuse=self.reuse):
+                self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
+                                                     tf.nn.relu, self.reuse)
+        else:
+            self.inputs_hidden = self.prediction_inputs
+
+    def build_cell(self):
+        """Create recurrent cell."""
+        with tf.variable_scope("rnn_cell", reuse=self.reuse):
+            if self.cell_type == C.LSTM:
+                cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+            elif self.cell_type == C.GRU:
+                cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+            else:
+                raise ValueError("Cell type '{}' unknown".format(self.cell_type))
+
+            self.cell = cell
+
+    def build_network(self):
+        """Build the core part of the model."""
+        self.build_input_layer()
+        self.build_cell()
+
+        self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
+        with tf.variable_scope("rnn_layer", reuse=self.reuse):
+            self.rnn_outputs, self.rnn_state = tf.nn.dynamic_rnn(self.cell,
+                                                                 self.inputs_hidden,
+                                                                 sequence_length=self.prediction_seq_len,
+                                                                 initial_state=self.initial_states,
+                                                                 dtype=tf.float32)
+            self.prediction_representation = self.rnn_outputs
+        self.build_output_layer()
+        self.build_loss()
+
+    def build_loss(self):
+        super(RModelV1, self).build_loss()
+
+    def step(self, session):
+        """
+        Run a training or validation step of the model.
+        Args:
+          session: Tensorflow session object.
+        Returns:
+          A triplet of loss, summary update and predictions.
+        """
+        if self.is_training:
+            # Training step.
+            output_feed = [self.loss,
+                           self.summary_update,
+                           self.outputs,
+                           self.parameter_update]
+            outputs = session.run(output_feed)
+            return outputs[0], outputs[1], outputs[2]
+        else:
+            # Evaluation step (no backprop).
+            output_feed = [self.loss,
+                           self.summary_update,
+                           self.outputs]
+            outputs = session.run(output_feed)
+            return outputs[0], outputs[1], outputs[2]
+
+    def sampled_step(self, session):
+        """
+        Generates a sequence by feeding the prediction of time step t as input to time step t+1. This still assumes
+        that we have ground-truth available.
+        Args:
+          session: Tensorflow session object.
+        Returns:
+          Prediction with shape (batch_size, self.target_seq_len, feature_size), ground-truth targets, seed sequence and
+          unique sample IDs.
+        """
+        assert self.is_eval, "Only works in evaluation mode."
+
+        # Get the current batch.
+        batch = session.run(self.data_placeholders)
+        data_id = batch[C.BATCH_ID]
+        data_sample = batch[C.BATCH_INPUT]
+        targets = data_sample[:, self.source_seq_len:]
+
+        seed_sequence = data_sample[:, :self.source_seq_len]
+        predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
+
+        return predictions, targets, seed_sequence, data_id
+
+    def predict(self, session):
+        """
+        Generates a sequence by feeding the prediction of time step t as input to time step t+1. This assumes no
+        ground-truth data is available.
+        Args:
+            session: Tensorflow session object.
+
+        Returns:
+            Prediction with shape (batch_size, self.target_seq_len, feature_size), seed sequence and unique sample IDs.
+        """
+        # `sampled_step` is written such that it works when no ground-truth data is available, too.
+        predictions, _, seed, data_id = self.sampled_step(session)
+        return predictions, seed, data_id
+
+    def sample(self, session, seed_sequence, prediction_steps):
+        """
+        Generates `prediction_steps` may poses given a seed sequence.
+        Args:
+            session: Tensorflow session object.
+            seed_sequence: A tensor of shape (batch_size, seq_len, feature_size)
+            prediction_steps: How many frames to predict into the future.
+        Returns:
+            Prediction with shape (batch_size, prediction_steps, feature_size)
+        """
+        assert self.is_eval, "Only works in sampling mode."
+        one_step_seq_len = np.ones(seed_sequence.shape[0])
+
+        # Feed the seed sequence to warm up the RNN.
+        feed_dict = {self.prediction_inputs: seed_sequence,
+                     self.prediction_seq_len: np.ones(seed_sequence.shape[0])*seed_sequence.shape[1]}
+        state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
+
+        # Now create predictions step-by-step.
+        prediction = prediction[:, -1:]
+        predictions = [prediction]
+        for step in range(prediction_steps-1):
+            # get the prediction
+            feed_dict = {self.prediction_inputs: prediction,
+                         self.initial_states: state,
+                         self.prediction_seq_len: one_step_seq_len}
+            state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
+            predictions.append(prediction)
+        return np.concatenate(predictions, axis=1)
+
+

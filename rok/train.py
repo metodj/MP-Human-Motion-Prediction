@@ -76,6 +76,8 @@ def create_model(session):
     # Parse the commandline arguments to a more readable config.
     if ARGS.model_type == "dummy":
         model_cls, config, experiment_name = get_dummy_config(ARGS)
+    elif ARGS.model_type == "rmodel_v1":
+        model_cls, config, experiment_name = get_rmodel_v1_config(ARGS)
     else:
         raise Exception("Model type '{}' unknown.".format(ARGS.model_type))
 
@@ -95,6 +97,8 @@ def create_model(session):
                                            extract_random_windows=True,
                                            num_parallel_calls=16)
         train_pl = train_data.get_tf_samples()
+        print("train_pl:\t", str(type(train_pl)), "\t", "shape: " + str(tf.shape(train_pl)), "\t",
+              "get_shape: " + str(train_pl.get_shape()))
 
     # Load validation data.
     with tf.name_scope("validation_data"):
@@ -106,6 +110,8 @@ def create_model(session):
                                            extract_random_windows=False,
                                            num_parallel_calls=16)
         valid_pl = valid_data.get_tf_samples()
+        print("valid_pl:\t", str(type(valid_pl)), "\t", "shape: " + str(tf.shape(valid_pl)), "\t",
+              "get_shape: " + str(valid_pl.get_shape()))
 
     # Create the training model.
     with tf.name_scope(C.TRAIN):
@@ -195,6 +201,46 @@ def get_dummy_config(args):
     config['activation_fn'] = args.activation_fn
 
     model_cls = models.DummyModel
+
+    # Create an experiment name that summarizes the configuration.
+    # It will be used as part of the experiment folder name.
+    experiment_name_format = "{}-{}{}-b{}-{}@{}-in{}_out{}"
+    experiment_name = experiment_name_format.format(EXPERIMENT_TIMESTAMP,
+                                                    args.model_type,
+                                                    "-"+args.experiment_name if args.experiment_name is not None else "",
+                                                    config['batch_size'],
+                                                    config['cell_size'],
+                                                    config['cell_type'],
+                                                    args.seq_length_in,
+                                                    args.seq_length_out)
+    return model_cls, config, experiment_name
+
+
+def get_rmodel_v1_config(args):
+    """
+    Create a config from the parsed commandline arguments that is more readable. You can use this to define more
+    parameters and their default values.
+    Args:
+        args: The parsed commandline arguments.
+
+    Returns:
+        The model class, the config, and the experiment name.
+    """
+    assert args.model_type == "rmodel_v1"
+
+    config = dict()
+    config['model_type'] = args.model_type
+    config['seed'] = C.SEED
+    config['learning_rate'] = args.learning_rate
+    config['cell_type'] = args.cell_type
+    config['cell_size'] = args.cell_size
+    config['input_hidden_size'] = args.input_hidden_size
+    config['source_seq_len'] = args.seq_length_in
+    config['target_seq_len'] = args.seq_length_out
+    config['batch_size'] = args.batch_size
+    config['activation_fn'] = args.activation_fn
+
+    model_cls = models.RModelV1
 
     # Create an experiment name that summarizes the configuration.
     # It will be used as part of the experiment folder name.
