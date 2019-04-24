@@ -99,7 +99,8 @@ def create_model(session):
         train_pl = train_data.get_tf_samples()
         # print("train_pl:\t", str(type(train_pl)), "\t", "shape: " + str(tf.shape(train_pl)), "\t",
         #       "get_shape: " + str(train_pl.get_shape()))
-        print("train_pl:\t", str(type(train_pl)), "\t", "shape: " + str(tf.shape(train_pl)))
+        print("train_pl\t", str(type(train_pl)))
+        print("train_pl:\t", train_pl.get_shape().as_list())
 
     # Load validation data.
     with tf.name_scope("validation_data"):
