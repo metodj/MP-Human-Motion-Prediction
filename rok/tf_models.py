@@ -38,6 +38,11 @@ class BaseModel(object):
         self.is_training = self.mode == C.TRAIN  # If we are in training mode.
         self.global_step = tf.train.get_global_step(graph=None)  # Stores the number of training iterations.
 
+        print("data_inputs\t", self.data_inputs.get_shape())
+        print("data_targets\t", self.data_targets.get_shape())
+        print("data_seq_len\t", self.data_seq_len.get_shape(), self.data_seq_len)
+        print("data_ids\t", self.data_ids.get_shape(), self.data_ids)
+
         # The following members should be set by the child class.
         self.outputs = None  # The final predictions.
         self.prediction_targets = None  # The targets.
@@ -73,11 +78,6 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
-        # print("targets_pose\t", "shape: " + str(tf.shape(targets_pose)), "\t",
-        #       "get_shape: " + str(targets_pose.get_shape()))
-        # print("predictions_pose\t", "shape: " + str(tf.shape(predictions_pose)), "\t",
-        #       "get_shape: " + str(predictions_pose.get_shape()))
-
         # Use MSE loss.
         with tf.name_scope("loss"):
             diff = targets_pose - predictions_pose
@@ -103,6 +103,8 @@ class BaseModel(object):
         with tf.variable_scope("output_layer", reuse=self.reuse):
             self.outputs = tf.layers.dense(self.prediction_representation, self.input_size,
                                            self.activation_fn_out, reuse=self.reuse)
+
+            print("outputs\t", self.outputs.get_shape())
 
     def summary_routines(self):
         """Create the summary operations necessary to write logs into tensorboard."""
@@ -165,9 +167,9 @@ class DummyModel(BaseModel):
         self.prediction_targets = self.data_inputs[:, 1:, :]  # The target poses for every time step.
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]), dtype=tf.int32)*self.sequence_length
 
-        # print("prediction_inputs:\t", str(type(self.prediction_inputs)), "\t",
-        #       "shape: " + str(tf.shape(self.prediction_inputs)), "\t",
-        #       "get_shape: " + str(self.prediction_inputs.get_shape()))
+        print("prediction_inputs\t", self.prediction_inputs.get_shape())
+        print("prediction_targets\t", self.prediction_targets.get_shape())
+        print("prediction_seq_len\t", self.prediction_seq_len.get_shape())
 
         # Sometimes the batch size is available at compile time.
         self.tf_batch_size = self.prediction_inputs.shape.as_list()[0]
@@ -187,6 +189,8 @@ class DummyModel(BaseModel):
                                                      tf.nn.relu, self.reuse)
         else:
             self.inputs_hidden = self.prediction_inputs
+
+            print("inputs_hidden:\t", self.inputs_hidden.get_shape())
 
     def build_cell(self):
         """Create recurrent cell."""
@@ -232,8 +236,32 @@ class DummyModel(BaseModel):
             output_feed = [self.loss,
                            self.summary_update,
                            self.outputs,
-                           self.parameter_update]
+                           self.parameter_update,
+                           self.data_inputs,
+                           self.data_targets,
+                           self.data_seq_len,
+                           self.data_ids,
+                           self.prediction_inputs,
+                           self.prediction_targets,
+                           self.inputs_hidden,
+                           self.rnn_state,
+                           self.rnn_outputs,
+                           self.prediction_representation,
+                           self.outputs
+                           ]
             outputs = session.run(output_feed)
+            print("data_inputs", outputs[4])
+            print("data_targets", outputs[5])
+            print("data_seq_len", outputs[6])
+            print("data_ids", outputs[7])
+            print("prediction_inputs", outputs[8])
+            print("prediction_targets", outputs[9])
+            print("inputs_hidden", outputs[10])
+            print("rnn_state", outputs[11])
+            print("rnn_outputs", outputs[12])
+            print("prediction_representation", outputs[13])
+            print("outputs", outputs[14])
+
             return outputs[0], outputs[1], outputs[2]
         else:
             # Evaluation step (no backprop).
