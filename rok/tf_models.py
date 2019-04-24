@@ -14,7 +14,7 @@ import tensorflow as tf
 
 from constants import Constants as C
 from utils import get_activation_fn
-
+from motion_metrics import MetricsEngine
 
 class BaseModel(object):
     """
@@ -59,6 +59,10 @@ class BaseModel(object):
         self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
         self.input_size = self.HUMAN_SIZE
 
+        # MetricsEngine
+        self.metrics_engine = MetricsEngine([x for x in C.METRIC_TARGET_LENGTHS if x <= self.target_seq_len])
+        self.metrics_engine.reset()
+
     def build_graph(self):
         """Build this model, i.e. its computational graph."""
         self.build_network()
@@ -78,10 +82,14 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
-        # Use MSE loss.
         with tf.name_scope("loss"):
-            diff = targets_pose - predictions_pose
-            self.loss = tf.reduce_mean(tf.square(diff))
+            # Mean joint angle difference
+            metrics = self.metrics_engine.compute(predictions_pose, targets_pose)
+            self.loss = metrics["joint_angle"]
+
+            # MSE
+            # diff = targets_pose - predictions_pose
+            # self.loss = tf.reduce_mean(tf.square(diff))
 
     def optimization_routines(self):
         """Add an optimizer."""
