@@ -576,6 +576,7 @@ class ModelV2(BaseModel):
         # Model
         self.num_layers = 3
         self.encoding_size = 50
+        self.keep_probs = 0.6
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. Defined in build_cell.
@@ -621,11 +622,15 @@ class ModelV2(BaseModel):
         with tf.variable_scope("rnn_cell", reuse=self.reuse):
             if self.cell_type == C.LSTM:
                 def cell():
-                    return tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+                    cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+                    cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=self.keep_probs)
+                    return cell
 
             elif self.cell_type == C.GRU:
                 def cell():
-                    return tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+                    cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+                    cell = tf.nn.rnn_cell.DropoutWrapper(cell, output_keep_prob=self.keep_probs)
+                    return cell
 
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
