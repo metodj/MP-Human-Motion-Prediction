@@ -16,10 +16,8 @@ import json
 import numpy as np
 import tensorflow as tf
 
-# RS
 import datetime
 import sys
-# RS
 
 import tf_models as models
 from tf_data import TFRecordMotionDataset
@@ -56,10 +54,8 @@ parser.add_argument("--experiment_name", type=str, default=None, help="A descrip
 ARGS = parser.parse_args()
 # EXPERIMENT_TIMESTAMP = str(int(time.time()))
 
-# RS
 EXPERIMENT_TIMESTAMP = datetime.datetime.now().strftime("%d_%H-%M")
 LOG_FILE = "./logs/log_" + EXPERIMENT_TIMESTAMP
-# RS
 
 
 def create_model(session):
@@ -76,8 +72,8 @@ def create_model(session):
     # Parse the commandline arguments to a more readable config.
     if ARGS.model_type == "dummy":
         model_cls, config, experiment_name = get_dummy_config(ARGS)
-    elif ARGS.model_type == "rmodel_v1":
-        model_cls, config, experiment_name = get_rmodel_v1_config(ARGS)
+    elif ARGS.model_type == "model_v1":
+        model_cls, config, experiment_name = get_model_v1_config(ARGS)
     else:
         raise Exception("Model type '{}' unknown.".format(ARGS.model_type))
 
@@ -218,7 +214,7 @@ def get_dummy_config(args):
     return model_cls, config, experiment_name
 
 
-def get_rmodel_v1_config(args):
+def get_model_v1_config(args):
     """
     Create a config from the parsed commandline arguments that is more readable. You can use this to define more
     parameters and their default values.
@@ -383,13 +379,8 @@ def train():
         print("Training Finished.")
 
 
-# RS
 sys.stdout = open(LOG_FILE, "w")
-# RS
 
 if __name__ == "__main__":
     train()
-
-    # RS
     sys.stdout.close()
-    # RS
