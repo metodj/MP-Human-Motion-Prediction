@@ -475,7 +475,8 @@ class ModelV1(BaseModel):
                 print("prediction_inputs", outputs[8].shape)
                 print("prediction_targets", outputs[9].shape)
                 print("inputs_hidden", outputs[10].shape)
-                print("rnn_state", outputs[11][0].shape, outputs[11][1].shape)
+                print("rnn_state", len(outputs[11]), type(outputs[11]), len(outputs[11][0]), type(outputs[11][0]),
+                      outputs[11][0][0].shape, outputs[11][0][1].shape)
                 print("rnn_outputs", outputs[12].shape)
                 print("prediction_representation", outputs[13].shape)
                 print("outputs", outputs[14].shape)
