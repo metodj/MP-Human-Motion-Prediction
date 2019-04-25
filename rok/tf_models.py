@@ -408,7 +408,7 @@ class ModelV1(BaseModel):
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
-            cells = tf.nn.rnn_cell.MultiRNNCell([cell] * 3, state_is_tuple=True)
+            cells = tf.nn.rnn_cell.MultiRNNCell([cell] * self.num_layers, state_is_tuple=True)
             self.cell = cells
 
     def build_network(self):
@@ -417,7 +417,7 @@ class ModelV1(BaseModel):
         self.build_cell()
 
         self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
-        print("initial_states", self.initial_states.get_shape())
+        print("initial_states", self.initial_states[0].get_shape(), self.initial_states[1].get_shape())
 
         with tf.variable_scope("rnn_layer", reuse=self.reuse):
             self.rnn_outputs, self.rnn_state = tf.nn.dynamic_rnn(self.cell,
