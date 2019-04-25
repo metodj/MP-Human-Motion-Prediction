@@ -650,10 +650,11 @@ class ModelV2(BaseModel):
                                                                  dtype=tf.float32)
             self.prediction_representation = self.rnn_outputs
 
-        with tf.variable_scope("autoencoder", reuse=self.reuse):
+        with tf.variable_scope("encoder", reuse=self.reuse):
             self.encoded_representation = tf.layers.dense(self.rnn_outputs, self.encoding_size,
                                                           tf.nn.relu, reuse=self.reuse)
 
+        with tf.variable_scope("decoder", reuse=self.reuse):
             self.decoded_representation = tf.layers.dense(self.encoded_representation, self.cell_size,
                                                           tf.nn.relu, reuse=self.reuse)
 
