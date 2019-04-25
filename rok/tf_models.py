@@ -15,10 +15,6 @@ import tensorflow as tf
 from constants import Constants as C
 from utils import get_activation_fn
 
-from fk import SMPL_MAJOR_JOINTS
-from fk import SMPL_NR_JOINTS
-from fk import SMPL_PARENTS
-from motion_metrics import MetricsEngine
 
 class BaseModel(object):
     """

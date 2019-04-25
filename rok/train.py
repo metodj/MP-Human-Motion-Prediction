@@ -224,7 +224,7 @@ def get_model_v1_config(args):
     Returns:
         The model class, the config, and the experiment name.
     """
-    assert args.model_type == "rmodel_v1"
+    assert args.model_type == "model_v1"
 
     config = dict()
     config['model_type'] = args.model_type
@@ -238,7 +238,7 @@ def get_model_v1_config(args):
     config['batch_size'] = args.batch_size
     config['activation_fn'] = args.activation_fn
 
-    model_cls = models.DummyModel
+    model_cls = models.ModelV1
 
     # Create an experiment name that summarizes the configuration.
     # It will be used as part of the experiment folder name.
