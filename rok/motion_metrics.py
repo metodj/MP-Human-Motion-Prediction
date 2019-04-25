@@ -186,9 +186,6 @@ class MetricsEngine(object):
         seq_length = predictions.shape[1]
         assert n_joints*dof == predictions.shape[-1], "unexpected number of joints"
 
-        print("predictions", type(predictions))
-        print("targets", type(targets))
-
         # first reshape everything to (-1, n_joints * 9)
         pred = np.reshape(predictions, [-1, n_joints*dof]).copy()
         targ = np.reshape(targets, [-1, n_joints*dof]).copy()
