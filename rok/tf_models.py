@@ -562,7 +562,7 @@ class ModelV1(BaseModel):
 
 class ModelV2(BaseModel):
     """
-    Model V1. 3 layer LSTM with autoencoder.
+    Model V2. 3 layer LSTM with autoencoder.
     """
 
     def __init__(self, config, data_pl, mode, reuse, **kwargs):
