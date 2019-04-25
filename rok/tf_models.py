@@ -402,13 +402,17 @@ class ModelV1(BaseModel):
         """Create recurrent cell."""
         with tf.variable_scope("rnn_cell", reuse=self.reuse):
             if self.cell_type == C.LSTM:
-                cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+                def cell():
+                    return tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+
             elif self.cell_type == C.GRU:
-                cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+                def cell():
+                    return tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse, state_is_tuple=True)
+
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
-            cells = tf.nn.rnn_cell.MultiRNNCell([cell for _ in range(self.num_layers)], state_is_tuple=True)
+            cells = tf.nn.rnn_cell.MultiRNNCell([cell() for _ in range(self.num_layers)], state_is_tuple=True)
             self.cell = cells
 
     def build_network(self):
