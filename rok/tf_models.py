@@ -417,7 +417,8 @@ class ModelV1(BaseModel):
         self.build_cell()
 
         self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
-        print("initial_states", self.initial_states[0].get_shape(), self.initial_states[1].get_shape())
+        print("initial_states", len(self.initial_states), self.initial_states[0][0].get_shape(),
+              self.initial_states[0][1].get_shape())
 
         with tf.variable_scope("rnn_layer", reuse=self.reuse):
             self.rnn_outputs, self.rnn_state = tf.nn.dynamic_rnn(self.cell,
