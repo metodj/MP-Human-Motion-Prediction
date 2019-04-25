@@ -359,6 +359,7 @@ class ModelV1(BaseModel):
         self.cell_type = self.config["cell_type"]
         self.cell_size = self.config["cell_size"]
         self.input_hidden_size = self.config.get("input_hidden_size")
+        self.num_layers = 3
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. Defined in build_cell.
@@ -416,6 +417,8 @@ class ModelV1(BaseModel):
         self.build_cell()
 
         self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
+        print("initial_states", self.initial_states.get_shape())
+
         with tf.variable_scope("rnn_layer", reuse=self.reuse):
             self.rnn_outputs, self.rnn_state = tf.nn.dynamic_rnn(self.cell,
                                                                  self.inputs_hidden,
