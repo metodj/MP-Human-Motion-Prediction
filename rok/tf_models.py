@@ -420,6 +420,12 @@ class ModelV1(BaseModel):
         print("initial_states", len(self.initial_states), self.initial_states[0][0].get_shape(),
               self.initial_states[0][1].get_shape())
 
+        num_param = 0
+        for v in tf.trainable_variables():
+            print(v.name, str(v.get_shape()))
+            num_param += np.prod(v.shape.as_list())
+        print("# of parameters: " + str(num_param))
+
         with tf.variable_scope("rnn_layer", reuse=self.reuse):
             self.rnn_outputs, self.rnn_state = tf.nn.dynamic_rnn(self.cell,
                                                                  self.inputs_hidden,
