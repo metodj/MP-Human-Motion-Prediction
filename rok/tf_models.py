@@ -88,8 +88,8 @@ class BaseModel(object):
 
             for i in range(5760):
                 r = product[i, :, :]
-                a = 1.41 * (r - tf.transpose(r))
-                loss = loss + tf.linalg.norm(a)
+                a = 0.707 * (r - tf.transpose(r))
+                loss = loss + tf.abs(tf.asin(tf.linalg.norm(a)))
 
             self.loss = loss
             # MSE
