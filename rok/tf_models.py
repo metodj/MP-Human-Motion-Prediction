@@ -80,10 +80,21 @@ class BaseModel(object):
 
         with tf.name_scope("loss"):
             # Mean joint angle difference
+            predictions_pose = tf.reshape(predictions_pose, shape=[-1, 3, 3])
+            targets_pose = tf.reshape(targets_pose, shape=[-1, 3, 3])
 
+            product = tf.matmul(predictions_pose, targets_pose)
+            loss = 0
+
+            for i in range(5760):
+                r = product[i, :, :]
+                a = 1.41 * (r - tf.transpose(r))
+                loss = loss + tf.linalg.norm(a)
+
+            self.loss = loss
             # MSE
-            diff = targets_pose - predictions_pose
-            self.loss = tf.reduce_mean(tf.square(diff))
+            # diff = targets_pose - predictions_pose
+            # self.loss = tf.reduce_mean(tf.square(diff))
 
     def optimization_routines(self):
         """Add an optimizer."""
