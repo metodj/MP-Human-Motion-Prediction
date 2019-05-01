@@ -16,6 +16,7 @@ from constants import Constants as C
 from utils import get_activation_fn
 from utils import geodesic_distance
 
+
 class BaseModel(object):
     """
     Base class that defines some functions and variables commonly used by all models. Subclass `BaseModel` to
@@ -37,6 +38,7 @@ class BaseModel(object):
         self.is_eval = self.mode == C.EVAL  # If we are in evaluation mode.
         self.is_training = self.mode == C.TRAIN  # If we are in training mode.
         self.global_step = tf.train.get_global_step(graph=None)  # Stores the number of training iterations.
+        self.max_gradient_norm = 10.0
 
         print("data_inputs\t", self.data_inputs.get_shape())
         print("data_targets\t", self.data_targets.get_shape())
@@ -98,7 +100,8 @@ class BaseModel(object):
             params = tf.trainable_variables()
             gradients = tf.gradients(self.loss, params)
             # In case you want to do anything to the gradients, here you could do it.
-            self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(gradients, params),
+            clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.max_gradient_norm)
+            self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params),
                                                               global_step=self.global_step)
 
     def build_output_layer(self):
