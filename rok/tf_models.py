@@ -788,6 +788,7 @@ class ZeroVelocityModel(BaseModel):
         self.rnn_outputs = None  # The outputs of the RNN layer.
         self.rnn_state = None  # The final state of the RNN layer.
         self.inputs_hidden = None  # The inputs to the recurrent cell.
+        self.last_frame = None
 
         # How many steps we must predict.
         if self.is_training:
@@ -813,9 +814,9 @@ class ZeroVelocityModel(BaseModel):
         """
         # We could e.g. pass them through a dense layer
         print("input_layer", "predictions_inputs", self.prediction_inputs.get_shape())
-        last_frame = self.prediction_inputs[:, -self.target_seq_len, :]
+        self.last_frame = self.prediction_inputs[:, -self.target_seq_len, :]
 
-        last_frame_repeated = tf.stack([last_frame] * self.sequence_length)
+        last_frame_repeated = tf.stack([self.last_frame] * self.sequence_length)
         last_frame_repeated = tf.transpose(last_frame_repeated, [1, 0, 2])
 
         self.inputs_hidden = last_frame_repeated
@@ -937,8 +938,11 @@ class ZeroVelocityModel(BaseModel):
         # Feed the seed sequence to warm up the RNN.
         print("sample", "seed_sequence", seed_sequence.shape)
 
-        feed_dict = {self.prediction_inputs: seed_sequence,
+        feed_dict = {self.last_frame: seed_sequence[:, -1, :],
                      self.prediction_seq_len: np.ones(seed_sequence.shape[0]) * seed_sequence.shape[1]}
+
+        # feed_dict = {self.prediction_inputs: seed_sequence,
+        #              self.prediction_seq_len: np.ones(seed_sequence.shape[0]) * seed_sequence.shape[1]}
         prediction = session.run(self.outputs, feed_dict=feed_dict)
 
         # Now create predictions step-by-step.
