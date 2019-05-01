@@ -687,38 +687,9 @@ class ModelV2(BaseModel):
             output_feed = [self.loss,
                            self.summary_update,
                            self.outputs,
-                           self.parameter_update,
-                           self.data_inputs,
-                           self.data_targets,
-                           self.data_seq_len,
-                           self.data_ids,
-                           self.prediction_inputs,
-                           self.prediction_targets,
-                           self.inputs_hidden,
-                           self.rnn_state,
-                           self.rnn_outputs,
-                           self.prediction_representation,
-                           self.outputs,
-                           self.global_step,
+                           self.parameter_update
                            ]
             outputs = session.run(output_feed)
-
-            if outputs[15] < 3:
-                print("\n")
-                print("data_inputs", outputs[4].shape)
-                print("data_targets", outputs[5].shape)
-                print("data_seq_len", outputs[6].shape)
-                print("data_ids", outputs[7].shape)
-                print("prediction_inputs", outputs[8].shape)
-                print("prediction_targets", outputs[9].shape)
-                print("inputs_hidden", outputs[10].shape)
-                print("rnn_state", len(outputs[11]), type(outputs[11]), len(outputs[11][0]), type(outputs[11][0]),
-                      outputs[11][0][0].shape, outputs[11][0][1].shape)
-                print("rnn_outputs", outputs[12].shape)
-                print("prediction_representation", outputs[13].shape)
-                print("outputs", outputs[14].shape)
-                print("predictions_pose", outputs[14][:, -self.target_seq_len:, :].shape)
-                print("targets_pose", outputs[9][:, -self.target_seq_len:, :].shape)
 
             return outputs[0], outputs[1], outputs[2]
         else:
@@ -841,6 +812,7 @@ class ZeroVelocityModel(BaseModel):
         be stored in `self.inputs_hidden`.
         """
         # We could e.g. pass them through a dense layer
+        print("input_layer", "predictions_inputs", self.prediction_inputs.get_shape())
         last_frame = self.prediction_inputs[:, -self.target_seq_len, :]
 
         last_frame_repeated = tf.stack([last_frame] * self.sequence_length)
@@ -963,9 +935,11 @@ class ZeroVelocityModel(BaseModel):
         one_step_seq_len = np.ones(seed_sequence.shape[0])
 
         # Feed the seed sequence to warm up the RNN.
+        print("sample", "seed_sequence", seed_sequence.shape)
+
         feed_dict = {self.prediction_inputs: seed_sequence,
                      self.prediction_seq_len: np.ones(seed_sequence.shape[0]) * seed_sequence.shape[1]}
-        state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
+        prediction = session.run(self.outputs, feed_dict=feed_dict)
 
         # Now create predictions step-by-step.
         prediction = prediction[:, -1:]
@@ -974,6 +948,6 @@ class ZeroVelocityModel(BaseModel):
             # get the prediction
             feed_dict = {self.prediction_inputs: prediction,
                          self.prediction_seq_len: one_step_seq_len}
-            state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
+            prediction = session.run(self.outputs, feed_dict=feed_dict)
             predictions.append(prediction)
         return np.concatenate(predictions, axis=1)
