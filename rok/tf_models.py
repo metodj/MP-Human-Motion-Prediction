@@ -907,6 +907,10 @@ class ZeroVelocityModel(BaseModel):
             outputs = session.run(output_feed)
             return outputs[0], outputs[1], outputs[2]
 
+    def optimization_routines(self):
+        """Add an optimizer."""
+        pass
+
     def sampled_step(self, session):
         """
         Generates a sequence by feeding the prediction of time step t as input to time step t+1. This still assumes
