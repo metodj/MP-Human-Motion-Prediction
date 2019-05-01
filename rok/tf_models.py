@@ -909,7 +909,7 @@ class ZeroVelocityModel(BaseModel):
 
     def optimization_routines(self):
         """Add an optimizer."""
-        pass
+        self.parameter_update = tf.constant([0])
 
     def sampled_step(self, session):
         """
