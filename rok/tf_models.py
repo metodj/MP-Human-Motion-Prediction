@@ -874,6 +874,7 @@ class ZeroVelocityModel(BaseModel):
         self.build_cell()
 
         self.rnn_outputs = self.inputs_hidden
+        self.rnn_state = self.inputs_hidden
         self.prediction_representation = self.rnn_outputs
 
         self.build_output_layer()
