@@ -966,7 +966,6 @@ class ZeroVelocityModel(BaseModel):
         feed_dict = {self.prediction_inputs: seed_sequence,
                      self.prediction_seq_len: np.ones(seed_sequence.shape[0]) * seed_sequence.shape[1]}
         state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
-        state, prediction = session.run([self.rnn_state, self.outputs])
 
         # Now create predictions step-by-step.
         prediction = prediction[:, -1:]
@@ -974,7 +973,6 @@ class ZeroVelocityModel(BaseModel):
         for step in range(prediction_steps - 1):
             # get the prediction
             feed_dict = {self.prediction_inputs: prediction,
-                         self.initial_states: state,
                          self.prediction_seq_len: one_step_seq_len}
             state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
             predictions.append(prediction)
