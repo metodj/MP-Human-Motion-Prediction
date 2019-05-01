@@ -110,7 +110,7 @@ class BaseModel(object):
             self.outputs = tf.layers.dense(self.prediction_representation, self.input_size,
                                            self.activation_fn_out, reuse=self.reuse)
 
-            print("outputs\t", self.outputs.get_shape())
+            print("outputs1\t", self.outputs.get_shape())
 
     def summary_routines(self):
         """Create the summary operations necessary to write logs into tensorboard."""
@@ -841,7 +841,7 @@ class ZeroVelocityModel(BaseModel):
         be stored in `self.inputs_hidden`.
         """
         # We could e.g. pass them through a dense layer
-        last_frame = self.data_inputs[:, -self.target_seq_len - 1, :]
+        last_frame = self.prediction_inputs[:, -self.target_seq_len, :]
 
         last_frame_repeated = tf.stack([last_frame] * self.sequence_length)
         last_frame_repeated = tf.transpose(last_frame_repeated, [1, 0, 2])
@@ -966,6 +966,7 @@ class ZeroVelocityModel(BaseModel):
         feed_dict = {self.prediction_inputs: seed_sequence,
                      self.prediction_seq_len: np.ones(seed_sequence.shape[0]) * seed_sequence.shape[1]}
         state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
+        state, prediction = session.run([self.rnn_state, self.outputs])
 
         # Now create predictions step-by-step.
         prediction = prediction[:, -1:]
