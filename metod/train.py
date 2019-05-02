@@ -294,10 +294,15 @@ def train():
             _metrics_engine.reset()
             sess.run(_eval_iter.initializer)
             try:
+                i = 0
                 while True:
                     # get the predictions and ground truth values
                     predictions, targets, seed_sequence, data_id = _eval_model.sampled_step(sess)
+                    print("preds shape: ", predictions.shape)
+                    print("targets shape: ", targets.shape)
                     _metrics_engine.compute_and_aggregate(predictions, targets)
+                    print(i)
+                    i += 1
 
                     if _return_results:
                         # Store each test sample and corresponding predictions with the unique sample IDs.
@@ -321,6 +326,7 @@ def train():
                     step_loss, summary, _ = train_model.step(sess)
                     train_writer.add_summary(summary, step)
                     train_loss += step_loss
+                    print(train_loss, "--------")
 
                     time_counter += (time.perf_counter() - start_time)
                     if step % ARGS.print_every == 0:

@@ -38,6 +38,9 @@ class BaseModel(object):
         self.is_training = self.mode == C.TRAIN  # If we are in training mode.
         self.global_step = tf.train.get_global_step(graph=None)  # Stores the number of training iterations.
 
+        print("source_seq_len ", self.source_seq_len)
+        print("target_seq_len", self.target_seq_len)
+
         # The following members should be set by the child class.
         self.outputs = None  # The final predictions.
         self.prediction_targets = None  # The targets.
@@ -331,10 +334,11 @@ class Seq2seq(BaseModel):
         else:
             self.sequence_length = self.target_seq_len
 
-        self.inputs_encoder = self.data_inputs[:, :120, :] #inputs encoder
-        self.prediction_inputs = self.data_inputs[:, 120:143, :]  #inputs decoder
-        self.prediction_targets = self.data_inputs[:, 121:144, :]  #ground-truths decoder
+        self.inputs_encoder = self.data_inputs[:, :self.source_seq_len, :] #inputs encoder
+        self.prediction_inputs = self.data_inputs[:, self.source_seq_len:(self.source_seq_len + self.target_seq_len - 1), :]  #inputs decoder
+        self.prediction_targets = self.data_inputs[:, (self.source_seq_len + 1):(self.source_seq_len + self.target_seq_len), :]  #ground-truths decoder
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]), dtype=tf.int32)*self.sequence_length
+        self.prediction_seq_len_encoder = tf.ones((tf.shape(self.prediction_targets)[0]), dtype=tf.int32)*(self.source_seq_len-1)
 
         # Sometimes the batch size is available at compile time.
         self.tf_batch_size = self.prediction_inputs.shape.as_list()[0]
@@ -342,6 +346,7 @@ class Seq2seq(BaseModel):
             # Sometimes it isn't. Use the dynamic shape instead.
             self.tf_batch_size = tf.shape(self.prediction_inputs)[0]
 
+    #TODO:
     def build_input_layer(self):
         """
         Here we can do some stuff on the inputs before passing them to the recurrent cell. The processed inputs should
@@ -369,11 +374,11 @@ class Seq2seq(BaseModel):
 
     def build_cell_decoder(self):
         """Create recurrent cell."""
-        with tf.variable_scope("rnn_cell_decoder", reuse=True):
+        with tf.variable_scope("rnn_cell_decoder", reuse=self.reuse):
             if self.cell_type == C.LSTM:
                 cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=True)
             elif self.cell_type == C.GRU:
-                cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=True)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
@@ -389,10 +394,12 @@ class Seq2seq(BaseModel):
         with tf.variable_scope("rnn_layer", reuse=self.reuse):
 
             # encoder
-            _, self.rnn_state = tf.nn.dynamic_rnn(self.cell,
-                                                                 self.inputs_encoder,
+            _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_encoder,
+                                                                 sequence_length=self.prediction_seq_len_encoder,
                                                                  initial_state=self.initial_states,
                                                                  dtype=tf.float32)
+
+
             # decoder
 
             self.initial_states_decoder = self.rnn_state
@@ -495,13 +502,13 @@ class Seq2seq(BaseModel):
         seed_decoder = seed_sequence[:, -1, :]  # (16, 1, 135)
 
         # Feed the seed sequence to warm up the RNN.
-        feed_dict = {self.prediction_inputs: seed_sequence_encoder,
+        feed_dict = {self.inputs_encoder: seed_sequence_encoder,
                      self.prediction_seq_len: np.ones(seed_sequence_encoder.shape[0])*seed_sequence_encoder.shape[1]}
-        state = session.run([self.rnn_state], feed_dict=feed_dict)
+        state = session.run(self.rnn_state, feed_dict=feed_dict)
 
         # Now create predictions step-by-step.
         prediction = seed_decoder[:, np.newaxis, :]
-        print(prediction.shape)
+        print("pred shape :", prediction.shape)
         predictions = [prediction]
         for step in range(prediction_steps):
             # get the prediction
@@ -509,5 +516,8 @@ class Seq2seq(BaseModel):
                          self.initial_states_decoder: state,
                          self.prediction_seq_len: one_step_seq_len}
             state, prediction = session.run([self.rnn_state_decoder, self.outputs], feed_dict=feed_dict)
+            print('jooou')
             predictions.append(prediction)
+
+        predictions.pop(0)  # remove first element
         return np.concatenate(predictions, axis=1)
