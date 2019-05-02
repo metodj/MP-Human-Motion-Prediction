@@ -227,6 +227,7 @@ def get_seq2seq_config(args):
     config['target_seq_len'] = args.seq_length_out
     config['batch_size'] = args.batch_size
     config['activation_fn'] = args.activation_fn
+    config['residuals'] = args.residuals
 
     model_cls = models.Seq2seq
 
@@ -336,7 +337,9 @@ def train():
                     if epoch >= ARGS.num_epochs:
                         stop_signal = True
                         break
-
+                # HEY!!
+                stop_signal = True
+                break
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
@@ -360,12 +363,13 @@ def train():
 
         print("End of Training.")
 
-        print("Evaluating validation set ...")
-        load_latest_checkpoint(sess, saver, experiment_dir)
-        valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
-        print("Valid [{:04d}] \t {} \t total_time: {:.3f}".format(step - 1,
-                                                                  metrics_engine.get_summary_string(valid_metrics),
-                                                                  valid_time))
+        # HEY!!
+        # print("Evaluating validation set ...")
+        # load_latest_checkpoint(sess, saver, experiment_dir)
+        # valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
+        # print("Valid [{:04d}] \t {} \t total_time: {:.3f}".format(step - 1,
+        #                                                           metrics_engine.get_summary_string(valid_metrics),
+        #                                                           valid_time))
 
         print("Training Finished.")
 

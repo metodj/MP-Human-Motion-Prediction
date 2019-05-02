@@ -369,9 +369,9 @@ class Seq2seq(BaseModel):
 
     def build_cell_decoder(self):
         """Create recurrent cell."""
-        with tf.variable_scope("rnn_cell", reuse=self.reuse):
+        with tf.variable_scope("rnn_cell_decoder", reuse=True):
             if self.cell_type == C.LSTM:
-                cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=True)
             elif self.cell_type == C.GRU:
                 cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
             else:
@@ -413,7 +413,7 @@ class Seq2seq(BaseModel):
         self.outputs = tf.add(self.outputs, self.prediction_inputs)
 
     def build_loss(self):
-        super(DummyModel, self).build_loss()
+        super(Seq2seq, self).build_loss()
 
     def step(self, session):
         """
@@ -490,6 +490,7 @@ class Seq2seq(BaseModel):
         assert self.is_eval, "Only works in sampling mode."
         one_step_seq_len = np.ones(seed_sequence.shape[0])
 
+        print("seed sequence shape :", seed_sequence.shape)
         seed_sequence_encoder = seed_sequence[:, :-1, :]  # (16, 119, 135)
         seed_decoder = seed_sequence[:, -1, :]  # (16, 1, 135)
 
@@ -499,7 +500,9 @@ class Seq2seq(BaseModel):
         state = session.run([self.rnn_state], feed_dict=feed_dict)
 
         # Now create predictions step-by-step.
-        predictions = [seed_decoder]
+        prediction = seed_decoder[:, np.newaxis, :]
+        print(prediction.shape)
+        predictions = [prediction]
         for step in range(prediction_steps):
             # get the prediction
             feed_dict = {self.prediction_inputs: prediction,
