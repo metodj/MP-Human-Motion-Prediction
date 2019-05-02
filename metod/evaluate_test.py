@@ -63,6 +63,8 @@ def create_and_restore_test_model(session, experiment_dir, args):
     # Select the type of model we want to use.
     if config['model_type'] == "dummy":
         model_cls = models.DummyModel
+    elif config['model_type'] == 'seq2seq':
+        model_cls = models.Seq2seq
     else:
         raise Exception("Unknown model type.")
 
@@ -178,7 +180,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     try:
-        experiment_dir = glob.glob(os.path.join(args.save_dir, args.model_id + "-*"), recursive=False)[0]
+        experiment_dir = glob.glob(os.path.join(args.save_dir, args.model_id), recursive=False)[0]
     except IndexError:
         raise Exception("Model " + str(args.model_id) + " is not found in " + str(args.save_dir))
 

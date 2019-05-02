@@ -324,7 +324,8 @@ class Seq2seq(BaseModel):
         self.rnn_outputs = None  # The outputs of the RNN layer.
         self.rnn_state = None  # The final state of the RNN layer.
         self.rnn_state_decoder = None
-        self.inputs_hidden = None  # The inputs to the recurrent cell.
+        self.inputs_hidden_encoder = None # The inputs to the encoder
+        self.inputs_hidden = None  # The inputs to the decoder
 
         # How many steps we must predict.
         if self.is_training:
@@ -344,6 +345,7 @@ class Seq2seq(BaseModel):
             # Sometimes it isn't. Use the dynamic shape instead.
             self.tf_batch_size = tf.shape(self.inputs_encoder)[0]
 
+
     def build_input_layer(self):
         """
         Here we can do some stuff on the inputs before passing them to the recurrent cell. The processed inputs should
@@ -351,57 +353,63 @@ class Seq2seq(BaseModel):
         """
         # We could e.g. pass them through a dense layer
         if self.input_hidden_size is not None:
+            # here we are now using same weights in the encoder and decoder for "linear encoding" of the input
             with tf.variable_scope("input_layer", reuse=self.reuse):
                 self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                      tf.nn.relu, self.reuse)
+                self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
+                                                     tf.nn.relu, self.reuse)
         else:
             self.inputs_hidden = self.prediction_inputs
+            self.inputs_hidden_encoder = self.inputs_encoder
 
     def build_cell(self):
         """Create recurrent cell."""
         with tf.variable_scope("rnn_cell", reuse=self.reuse):
             if self.cell_type == C.LSTM:
                 cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
             self.cell = cell
-
-    def build_cell_decoder(self):
-        """Create recurrent cell."""
-        with tf.variable_scope("rnn_cell_decoder", reuse=self.reuse):
-            if self.cell_type == C.LSTM:
-                cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=True)
-            elif self.cell_type == C.GRU:
-                cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=True)
-            else:
-                raise ValueError("Cell type '{}' unknown".format(self.cell_type))
-
             self.cell_decoder = cell_decoder
+
+    # def build_cell_decoder(self):
+    #     """Create recurrent cell."""
+    #     with tf.variable_scope("decoder_rnn_cell", reuse=self.reuse):
+    #         if self.cell_type == C.LSTM:
+    #             cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+    #         elif self.cell_type == C.GRU:
+    #             cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+    #         else:
+    #             raise ValueError("Cell type '{}' unknown".format(self.cell_type))
+    #
+    #         self.cell_decoder = cell_decoder
 
     def build_network(self):
         """Build the core part of the model."""
         self.build_input_layer()
         self.build_cell()
-        self.build_cell_decoder()
 
         self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
-        with tf.variable_scope("rnn_layer", reuse=self.reuse):
+        # encoder
+        with tf.variable_scope("rnn_layer_encoder", reuse=self.reuse):
 
-            # encoder
-            _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_encoder,
+            _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder,
                                                                  sequence_length=self.prediction_seq_len_encoder,
                                                                  initial_state=self.initial_states,
                                                                  dtype=tf.float32)
 
-
-            # decoder
+        # decoder
+        with tf.variable_scope("rnn_layer", reuse=self.reuse):
 
             self.initial_states_decoder = self.rnn_state
             self.rnn_outputs, self.rnn_state_decoder = tf.nn.dynamic_rnn(self.cell_decoder,
-                                                                  self.prediction_inputs,
+                                                                  self.inputs_hidden,
                                                                   sequence_length=self.prediction_seq_len,
                                                                   initial_state=self.initial_states_decoder,
                                                                   dtype=tf.float32)
@@ -494,7 +502,7 @@ class Seq2seq(BaseModel):
         assert self.is_eval, "Only works in sampling mode."
         one_step_seq_len = np.ones(seed_sequence.shape[0])
 
-        print("seed sequence shape :", seed_sequence.shape)
+        #print("seed sequence shape :", seed_sequence.shape)
         seed_sequence_encoder = seed_sequence[:, :-1, :]  # (16, 119, 135)
         seed_decoder = seed_sequence[:, -1, :]  # (16, 1, 135)
 
@@ -503,8 +511,8 @@ class Seq2seq(BaseModel):
                      self.prediction_seq_len: np.ones(seed_sequence_encoder.shape[0])*seed_sequence_encoder.shape[1]}
         state = session.run(self.rnn_state, feed_dict=feed_dict)
 
-        print(state[0].shape)
-        print('test')
+        #print(state[0].shape)
+        #print('test')
 
         # Now create predictions step-by-step.
         prediction = seed_decoder[:, np.newaxis, :]

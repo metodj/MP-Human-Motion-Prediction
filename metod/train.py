@@ -294,15 +294,15 @@ def train():
             _metrics_engine.reset()
             sess.run(_eval_iter.initializer)
             try:
-                i = 0
+                #i = 0
                 while True:
                     # get the predictions and ground truth values
                     predictions, targets, seed_sequence, data_id = _eval_model.sampled_step(sess)
-                    print("preds shape: ", predictions.shape)
-                    print("targets shape: ", targets.shape)
+                    #print("preds shape: ", predictions.shape)
+                    #print("targets shape: ", targets.shape)
                     _metrics_engine.compute_and_aggregate(predictions, targets)
-                    print(i)
-                    i += 1
+                    #print(i)
+                    #i += 1
 
                     if _return_results:
                         # Store each test sample and corresponding predictions with the unique sample IDs.
@@ -343,7 +343,7 @@ def train():
                     if epoch >= ARGS.num_epochs:
                         stop_signal = True
                         break
-                # HEY!!
+                # COMMENT when running on Leonhard
                 stop_signal = True
                 break
 
@@ -369,7 +369,7 @@ def train():
 
         print("End of Training.")
 
-        # HEY!!
+        # UNCOMMENT when running on Leonhard
         # print("Evaluating validation set ...")
         # load_latest_checkpoint(sess, saver, experiment_dir)
         # valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
