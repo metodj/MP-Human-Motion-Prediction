@@ -16,6 +16,11 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
+# RS
+import sys
+import datetime
+# RS
+
 import tf_models as models
 from tf_data import TFRecordMotionDataset
 from constants import Constants as C
@@ -63,6 +68,10 @@ def create_and_restore_test_model(session, experiment_dir, args):
     # Select the type of model we want to use.
     if config['model_type'] == "dummy":
         model_cls = models.DummyModel
+    elif config["model_type"] == "zero_velocity":
+        model_cls = models.ZeroVelocityModel
+    elif config['model_type'] == 'seq2seq':
+        model_cls = models.Seq2seq
     else:
         raise Exception("Unknown model type.")
 
@@ -83,19 +92,20 @@ def create_and_restore_test_model(session, experiment_dir, args):
         num_param += np.prod(v.shape.as_list())
     print("# of parameters: " + str(num_param))
 
-    # Restore model parameters.
-    saver = tf.train.Saver(tf.global_variables(), max_to_keep=1, save_relative_paths=True)
+    if not config["model_type"] == "zero_velocity":
+        # Restore model parameters.
+        saver = tf.train.Saver(tf.global_variables(), max_to_keep=1, save_relative_paths=True)
 
-    # Restore the latest checkpoint found in `experiment_dir`.
-    ckpt = tf.train.get_checkpoint_state(experiment_dir, latest_filename="checkpoint")
+        # Restore the latest checkpoint found in `experiment_dir`.
+        ckpt = tf.train.get_checkpoint_state(experiment_dir, latest_filename="checkpoint")
 
-    if ckpt and ckpt.model_checkpoint_path:
-        # Check if the specific checkpoint exists
-        ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
-        print("Loading model checkpoint {0}".format(ckpt_name))
-        saver.restore(session, ckpt.model_checkpoint_path)
-    else:
-        raise ValueError("could not load checkpoint")
+        if ckpt and ckpt.model_checkpoint_path:
+            # Check if the specific checkpoint exists
+            ckpt_name = os.path.basename(ckpt.model_checkpoint_path)
+            print("Loading model checkpoint {0}".format(ckpt_name))
+            saver.restore(session, ckpt.model_checkpoint_path)
+        else:
+            raise ValueError("could not load checkpoint")
 
     return test_model, test_data, config
 
@@ -167,6 +177,9 @@ def evaluate(experiment_dir, args):
                 visualizer.visualize(eval_result[k][1], eval_result[k][0], title=k)
 
 
+EXPERIMENT_TIMESTAMP = datetime.datetime.now().strftime("%d_%H-%M")
+LOG_FILE = "./logs/log_" + EXPERIMENT_TIMESTAMP
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', required=True, type=str, default="./data", help='Where the data is stored.')
@@ -175,12 +188,18 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', default=64, type=int, help='Batch size.')
     parser.add_argument('--visualize', action="store_true", help='Visualize some model predictions.')
     parser.add_argument('--export', action="store_true", help="Export predictions to a csv file.")
+    parser.add_argument("--log", action="store_true", help="create log file")
 
     args = parser.parse_args()
+
+    if args.log:
+        sys.stdout = open(LOG_FILE, "w")
+
     try:
         experiment_dir = glob.glob(os.path.join(args.save_dir, args.model_id + "-*"), recursive=False)[0]
     except IndexError:
         raise Exception("Model " + str(args.model_id) + " is not found in " + str(args.save_dir))
 
     evaluate(experiment_dir, args)
+    sys.stdout.close()
 

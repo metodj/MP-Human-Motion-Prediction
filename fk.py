@@ -146,7 +146,7 @@ class ForwardKinematics(object):
             otherwise (N, H36M_NR_JOINTS, 3).
         """
         assert self.major_joints is not None
-        smpl_full = sparse_to_full(joint_angles_sparse, self.major_joints, self.n_joints, rep)
+        smpl_full = sparse_to_full(joint_angles_sparse, self.major_joints, self.n_joints)
         positions = self.fk(smpl_full)
         if return_sparse:
             positions = positions[:, self.major_joints]

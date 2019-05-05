@@ -86,3 +86,22 @@ def export_results(eval_result, output_file):
         sample_poses.append(eval_result[k][0])
 
     to_csv(output_file, np.stack(sample_poses), sample_file_ids)
+
+
+def geodesic_distance(x1, x2):
+    y1 = tf.reshape(x1, shape=[-1, 3, 3])
+    y2 = tf.reshape(x2, shape=[-1, 3, 3])
+    y2 = tf.transpose(y2, perm=[0, 2, 1])
+
+    z = tf.matmul(y1, y2)
+    zt = tf.transpose(z, perm=[0, 2, 1])
+
+    u = (z - zt) / 2
+
+    v = tf.square(tf.reshape(u, shape=(-1, 9)))
+    w = tf.sqrt(tf.reduce_sum(v, axis=1))
+
+    a_norm = tf.divide(w, np.sqrt(2))
+    a_norm = tf.clip_by_value(a_norm, -1.0, 1.0)  # Account for numerical errors
+
+    return tf.reduce_mean(tf.abs(tf.asin(a_norm)))

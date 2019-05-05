@@ -59,7 +59,7 @@ class Dataset(object):
             print("Meta-data not found.")
             return False
         else:
-            return np.load(meta_data_path)['stats'].tolist()
+            return np.load(meta_data_path, allow_pickle=True)['stats'].tolist()
 
     def tf_data_transformations(self):
         """Loads the raw data and applies some pre-processing."""
@@ -156,7 +156,7 @@ class TFRecordMotionDataset(Dataset):
 
         # Speedup.
         self.tf_data = self.tf_data.prefetch(2)
-        self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
+        # self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
 
     def _pp_filter(self, sample):
         """Filter out samples that are smaller then the required window size."""

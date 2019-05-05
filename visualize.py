@@ -9,6 +9,9 @@ That is, no partial/full copy nor modification of this code and
 accompanying data should be made publicly or privately available to
 current/future students or other parties.
 """
+import os
+import subprocess
+import shutil
 import numpy as np
 from matplotlib import pyplot as plt, animation as animation
 from mpl_toolkits.mplot3d import Axes3D
@@ -25,8 +28,9 @@ class Visualizer(object):
     """
     Helper class to visualize SMPL joint angles parameterized as rotation matrices.
     """
-    def __init__(self, fk_engine):
+    def __init__(self, fk_engine, video_path=None):
         self.fk_engine = fk_engine
+        self.video_path = video_path
         self.is_sparse = True
         self.expected_n_input_joints = len(self.fk_engine.major_joints) if self.is_sparse else self.fk_engine.n_joints
 
@@ -96,30 +100,32 @@ class Visualizer(object):
                             titles=titles,
                             fig_title=title,
                             parents=self.fk_engine.parents,
-                            change_color_after_frame=(seed.shape[0], None))
+                            change_color_after_frame=(seed.shape[0], None),
+                            video_path=self.video_path)
 
 
 def visualize_positions(positions, colors, titles, fig_title, parents, change_color_after_frame=None, overlay=False,
-                        fps=60):
+                        fps=60, video_path=None):
     """
     Visualize motion given 3D positions. Can visualize several motions side by side. If the sequence lengths don't
     match, all animations are displayed until the shortest sequence length.
     Args:
-        positions: a list of np arrays in shape (seq_length, n_joints, 3) giving the 3D positions per joint and frame
-        colors: list of color for each entry in `positions`
-        titles: list of titles for each entry in `positions`
-        fig_title: title for the entire figure
-        parents: skeleton structure
-        fps: frames per second
-        change_color_after_frame: after this frame id, the color of the plot is changed (for each entry in `positions`)
-        overlay: if true, all entries in `positions` are plotted into the same subplot
+        positions: A list of np arrays in shape (seq_length, n_joints, 3) giving the 3D positions per joint and frame.
+        colors: List of color for each entry in `positions`.
+        titles: List of titles for each entry in `positions`.
+        fig_title: Title for the entire figure.
+        parents: Skeleton structure.
+        fps: Frames per second.
+        change_color_after_frame: After this frame id, the color of the plot is changed (for each entry in `positions`).
+        overlay: If true, all entries in `positions` are plotted into the same subplot.
+        video_path: If not None, the animation is saved as a movie instead of shown interactively.
     """
     seq_length = np.amin([pos.shape[0] for pos in positions])
     n_joints = positions[0].shape[1]
     pos = positions
 
     # create figure with as many subplots as we have skeletons
-    fig = plt.figure(figsize=(16, 9))
+    fig = plt.figure(figsize=(12, 6))
     plt.clf()
     n_axes = 1 if overlay else len(pos)
     axes = [fig.add_subplot(1, n_axes, i + 1, projection='3d') for i in range(n_axes)]
@@ -205,8 +211,71 @@ def visualize_positions(positions, colors, titles, fig_title, parents, change_co
                                        fargs=(pos, all_lines, parents, colors + [colors[0]]),
                                        interval=1000/fps)
 
-    plt.show()
+    if video_path is None:
+        # interactive
+        plt.show()
+    else:
+        # save to video file
+        print('saving video to {}'.format(video_path))
+        save_animation(fig, seq_length, update_frame, [pos, all_lines, parents, colors + [colors[0]]],
+                       video_path=video_path)
     plt.close()
+
+
+def save_animation(fig, seq_length, update_func, update_func_args, video_path,
+                   start_recording=0, end_recording=None, fps_in=60, fps_out=30):
+    """
+    Save animation as a video. This requires ffmpeg to be installed.
+    Args:
+        fig: Figure where animation is displayed.
+        seq_length: Total length of the animation.
+        update_func: Update function that is driving the animation.
+        update_func_args: Arguments for `update_func`.
+        video_path: Where to store the video.
+        start_recording: Frame index where to start recording.
+        end_recording: Frame index where to stop recording (defaults to `seq_length`, exclusive).
+        fps_in: Input FPS.
+        fps_out: Output FPS.
+    """
+    tmp_path = os.path.join(video_path, "tmp_frames")
+
+    # Cleanup.
+    if os.path.exists(tmp_path):
+        shutil.rmtree(tmp_path, ignore_errors=True)
+    os.makedirs(tmp_path)
+
+    start_frame = start_recording
+    end_frame = end_recording or seq_length
+
+    # Save all the frames into the temp folder.
+    for j in range(start_frame, end_frame):
+        update_func(j, *update_func_args)
+        fig.savefig(os.path.join(tmp_path, 'frame_{:0>4}.{}'.format(j, "png")), dip=1000)
+
+    # Get unique movie name.
+    counter = 0
+    movie_name = os.path.join(video_path, "vid{}.avi".format(counter))
+    while os.path.exists(movie_name):
+        counter += 1
+        movie_name = os.path.join(video_path, "vid{}.avi".format(counter))
+
+    # Create the movie from the stored files using ffmpeg.
+    command = ['ffmpeg',
+               '-start_number', str(start_frame),
+               '-framerate', str(fps_in),  # input framerate, must be this early, otherwise it is ignored
+               '-r', str(fps_out),  # output framerate
+               '-loglevel', 'panic',
+               '-i', os.path.join(tmp_path, 'frame_%04d.png'),
+               '-c:v', 'ffv1',
+               '-pix_fmt', 'yuv420p',
+               '-y',
+               movie_name]
+    FNULL = open(os.devnull, 'w')
+    subprocess.Popen(command, stdout=FNULL).wait()
+    FNULL.close()
+
+    # Cleanup.
+    shutil.rmtree(tmp_path, ignore_errors=True)
 
 
 def _get_random_sample(tfrecords_path, n_samples=10):
@@ -247,13 +316,18 @@ if __name__ == '__main__':
     # You will need a rather new version of TensorFlow to use eager execution.
     tf.enable_eager_execution()
 
-    # Make sure to update this path.
-    data_path = "./data/validation/poses-?????-of-?????"
+    # Where the data is stored.
+    # data_path = "./data/validation/poses-?????-of-?????"
+    data_path = "/cluster/project/infk/hilliges/lectures/mp19/project4/validation/poses-?????-of-?????"
 
-    # get 10 random samples
-    samples = _get_random_sample(data_path, n_samples=10)
+    # Get some random samples.
+    samples = _get_random_sample(data_path, n_samples=5)
 
-    # visualize each of them
-    visualizer = Visualizer(SMPLForwardKinematics())
+    # If we set the video path, the animations will be saved to video instead of shown interactively.
+    video_path = os.environ['HOME'] if 'HOME' in os.environ else './'
+    video_path = os.path.join(video_path, "videos")
+
+    # Visualize each of them.
+    visualizer = Visualizer(SMPLForwardKinematics(), video_path=video_path)
     for i, sample in enumerate(samples):
         visualizer.visualize(sample[:120], sample[120:], 'random validation sample {}'.format(i))

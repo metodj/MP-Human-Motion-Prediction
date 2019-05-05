@@ -16,6 +16,9 @@ import json
 import numpy as np
 import tensorflow as tf
 
+import datetime
+import sys
+
 import tf_models as models
 from tf_data import TFRecordMotionDataset
 from constants import Constants as C
@@ -47,9 +50,19 @@ parser.add_argument("--test_every", type=int, default=200, help="How often to co
 parser.add_argument("--use_cpu", action="store_true", help="Use CPU instead of GPU.")
 parser.add_argument("--experiment_name", type=str, default=None, help="A descriptive name for the experiment.")
 
+#seq2seq
+parser.add_argument("--residuals", action="store_false", help="Use of residuals in the decoder part of seq2seq model.")
+parser.add_argument("--optimizer", type=str, default="Adam", help="optimizer: Adam or SGD")
+parser.add_argument("--loss", type=str, default="mse", help="mean squared error (mse) or geodesic (geo) loss")
+parser.add_argument("--samp_loss", action="store_true", help="sampling loss: rnn output from previous is feed to input")
+
+parser.add_argument("--log", action="store_true", help="create log file")
 
 ARGS = parser.parse_args()
-EXPERIMENT_TIMESTAMP = str(int(time.time()))
+# EXPERIMENT_TIMESTAMP = str(int(time.time()))
+
+EXPERIMENT_TIMESTAMP = datetime.datetime.now().strftime("%d_%H-%M")
+LOG_FILE = "./logs/log_" + EXPERIMENT_TIMESTAMP
 
 
 def create_model(session):
@@ -66,6 +79,14 @@ def create_model(session):
     # Parse the commandline arguments to a more readable config.
     if ARGS.model_type == "dummy":
         model_cls, config, experiment_name = get_dummy_config(ARGS)
+    elif ARGS.model_type == "model_v1":
+        model_cls, config, experiment_name = get_model_v1_config(ARGS)
+    elif ARGS.model_type == "model_v2":
+        model_cls, config, experiment_name = get_model_v2_config(ARGS)
+    elif ARGS.model_type == "zero_velocity":
+        model_cls, config, experiment_name = get_zero_velocity_model_config(ARGS)
+    elif ARGS.model_type == "seq2seq":
+        model_cls, config, experiment_name = get_seq2seq_config(ARGS)
     else:
         raise Exception("Model type '{}' unknown.".format(ARGS.model_type))
 
@@ -86,6 +107,9 @@ def create_model(session):
                                            num_parallel_calls=16)
         train_pl = train_data.get_tf_samples()
 
+        print("train_pl\t", str(type(train_pl)))
+        print(train_pl.keys())
+
     # Load validation data.
     with tf.name_scope("validation_data"):
         valid_data = TFRecordMotionDataset(data_path=valid_data_path,
@@ -96,6 +120,8 @@ def create_model(session):
                                            extract_random_windows=False,
                                            num_parallel_calls=16)
         valid_pl = valid_data.get_tf_samples()
+        print("valid_pl\t", str(type(valid_pl)))
+        print(valid_pl.keys())
 
     # Create the training model.
     with tf.name_scope(C.TRAIN):
@@ -120,6 +146,7 @@ def create_model(session):
     # Count and print the number of trainable parameters.
     num_param = 0
     for v in tf.trainable_variables():
+        print(v.name, str(v.get_shape()))
         num_param += np.prod(v.shape.as_list())
     print("# of parameters: " + str(num_param))
     config["num_parameters"] = int(num_param)
@@ -183,8 +210,181 @@ def get_dummy_config(args):
     config['target_seq_len'] = args.seq_length_out
     config['batch_size'] = args.batch_size
     config['activation_fn'] = args.activation_fn
+    config['residuals'] = args.residuals
+    config['optimizer'] = args.optimizer
+    config["loss"] = args.loss
 
     model_cls = models.DummyModel
+
+    # Create an experiment name that summarizes the configuration.
+    # It will be used as part of the experiment folder name.
+    experiment_name_format = "{}-{}{}-b{}-{}@{}-in{}_out{}"
+    experiment_name = experiment_name_format.format(EXPERIMENT_TIMESTAMP,
+                                                    args.model_type,
+                                                    "-"+args.experiment_name if args.experiment_name is not None else "",
+                                                    config['batch_size'],
+                                                    config['cell_size'],
+                                                    config['cell_type'],
+                                                    args.seq_length_in,
+                                                    args.seq_length_out)
+    return model_cls, config, experiment_name
+
+
+def get_model_v1_config(args):
+    """
+    Create a config from the parsed commandline arguments that is more readable. You can use this to define more
+    parameters and their default values.
+    Args:
+        args: The parsed commandline arguments.
+
+    Returns:
+        The model class, the config, and the experiment name.
+    """
+    assert args.model_type == "model_v1"
+
+    config = dict()
+    config['model_type'] = args.model_type
+    config['seed'] = C.SEED
+    config['learning_rate'] = args.learning_rate
+    config['cell_type'] = args.cell_type
+    config['cell_size'] = args.cell_size
+    config['input_hidden_size'] = args.input_hidden_size
+    config['source_seq_len'] = args.seq_length_in
+    config['target_seq_len'] = args.seq_length_out
+    config['batch_size'] = args.batch_size
+    config['activation_fn'] = args.activation_fn
+    config['optimizer'] = args.optimizer
+    config["loss"] = args.loss
+
+    model_cls = models.ModelV1
+
+    # Create an experiment name that summarizes the configuration.
+    # It will be used as part of the experiment folder name.
+    experiment_name_format = "{}-{}{}-b{}-{}@{}-in{}_out{}"
+    experiment_name = experiment_name_format.format(EXPERIMENT_TIMESTAMP,
+                                                    args.model_type,
+                                                    "-"+args.experiment_name if args.experiment_name is not None else "",
+                                                    config['batch_size'],
+                                                    config['cell_size'],
+                                                    config['cell_type'],
+                                                    args.seq_length_in,
+                                                    args.seq_length_out)
+    return model_cls, config, experiment_name
+
+
+def get_model_v2_config(args):
+    """
+    Create a config from the parsed commandline arguments that is more readable. You can use this to define more
+    parameters and their default values.
+    Args:
+        args: The parsed commandline arguments.
+
+    Returns:
+        The model class, the config, and the experiment name.
+    """
+    assert args.model_type == "model_v2"
+
+    config = dict()
+    config['model_type'] = args.model_type
+    config['seed'] = C.SEED
+    config['learning_rate'] = args.learning_rate
+    config['cell_type'] = args.cell_type
+    config['cell_size'] = args.cell_size
+    config['input_hidden_size'] = args.input_hidden_size
+    config['source_seq_len'] = args.seq_length_in
+    config['target_seq_len'] = args.seq_length_out
+    config['batch_size'] = args.batch_size
+    config['activation_fn'] = args.activation_fn
+    config['optimizer'] = args.optimizer
+    config["loss"] = args.loss
+
+    model_cls = models.ModelV2
+
+    # Create an experiment name that summarizes the configuration.
+    # It will be used as part of the experiment folder name.
+    experiment_name_format = "{}-{}{}-b{}-{}@{}-in{}_out{}"
+    experiment_name = experiment_name_format.format(EXPERIMENT_TIMESTAMP,
+                                                    args.model_type,
+                                                    "-"+args.experiment_name if args.experiment_name is not None else "",
+                                                    config['batch_size'],
+                                                    config['cell_size'],
+                                                    config['cell_type'],
+                                                    args.seq_length_in,
+                                                    args.seq_length_out)
+    return model_cls, config, experiment_name
+
+
+def get_zero_velocity_model_config(args):
+    """
+    Create a config from the parsed commandline arguments that is more readable. You can use this to define more
+    parameters and their default values.
+    Args:
+        args: The parsed commandline arguments.
+
+    Returns:
+        The model class, the config, and the experiment name.
+    """
+    assert args.model_type == "zero_velocity"
+
+    config = dict()
+    config['model_type'] = args.model_type
+    config['seed'] = C.SEED
+    config['learning_rate'] = args.learning_rate
+    config['cell_type'] = args.cell_type
+    config['cell_size'] = args.cell_size
+    config['input_hidden_size'] = args.input_hidden_size
+    config['source_seq_len'] = args.seq_length_in
+    config['target_seq_len'] = args.seq_length_out
+    config['batch_size'] = args.batch_size
+    config['activation_fn'] = args.activation_fn
+    config['optimizer'] = args.optimizer
+    config["loss"] = args.loss
+
+    model_cls = models.ZeroVelocityModel
+
+    # Create an experiment name that summarizes the configuration.
+    # It will be used as part of the experiment folder name.
+    experiment_name_format = "{}-{}{}-b{}-{}@{}-in{}_out{}"
+    experiment_name = experiment_name_format.format(EXPERIMENT_TIMESTAMP,
+                                                    args.model_type,
+                                                    "-"+args.experiment_name if args.experiment_name is not None else "",
+                                                    config['batch_size'],
+                                                    config['cell_size'],
+                                                    config['cell_type'],
+                                                    args.seq_length_in,
+                                                    args.seq_length_out)
+    return model_cls, config, experiment_name
+
+
+def get_seq2seq_config(args):
+    """
+    Create a config from the parsed commandline arguments that is more readable. You can use this to define more
+    parameters and their default values.
+    Args:
+        args: The parsed commandline arguments.
+
+    Returns:
+        The model class, the config, and the experiment name.
+    """
+    assert args.model_type == "seq2seq"
+
+    config = dict()
+    config['model_type'] = args.model_type
+    config['seed'] = C.SEED
+    config['learning_rate'] = args.learning_rate
+    config['cell_type'] = args.cell_type
+    config['cell_size'] = args.cell_size
+    config['input_hidden_size'] = args.input_hidden_size
+    config['source_seq_len'] = args.seq_length_in
+    config['target_seq_len'] = args.seq_length_out
+    config['batch_size'] = args.batch_size
+    config['activation_fn'] = args.activation_fn
+    config['residuals'] = args.residuals
+    config['optimizer'] = args.optimizer
+    config["loss"] = args.loss
+    config["sampling_loss"] = args.samp_loss
+
+    model_cls = models.Seq2seq
 
     # Create an experiment name that summarizes the configuration.
     # It will be used as part of the experiment folder name.
@@ -311,7 +511,8 @@ def train():
 
             # Save the model. You might want to think about if it's always a good idea to do that.
             print("Saving the model to {}".format(experiment_dir))
-            saver.save(sess, os.path.normpath(os.path.join(experiment_dir, 'checkpoint')), global_step=step-1)
+            if not train_model.config["model_type"] == "zero_velocity":
+                saver.save(sess, os.path.normpath(os.path.join(experiment_dir, 'checkpoint')), global_step=step-1)
 
         print("End of Training.")
 
@@ -326,4 +527,8 @@ def train():
 
 
 if __name__ == "__main__":
+    if ARGS.log:
+        sys.stdout = open(LOG_FILE, "w")
+
     train()
+    sys.stdout.close()
