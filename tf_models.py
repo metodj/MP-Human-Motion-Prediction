@@ -1079,8 +1079,12 @@ class Seq2seq(BaseModel):
         with tf.variable_scope("fidelity_output", reuse=self.reuse):
             self.fidelity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
 
-            self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar)
-            self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred)
+            if self.cell_type == "gru":
+                self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar)
+                self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred)
+            else:
+                self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar[1])
+                self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred[1])
 
     def build_loss_fidelity(self):
         self.loss_fidelity = tf.reduce_mean(tf.log(self.outputs_fid_tar + 1e-12)) + \
@@ -1106,8 +1110,12 @@ class Seq2seq(BaseModel):
         with tf.variable_scope("continuity_output", reuse=self.reuse):
             self.continuity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
 
-            self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar)
-            self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred)
+            if self.cell_type == "gru":
+                self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar)
+                self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred)
+            else:
+                self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar[1])
+                self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred[1])
 
     def build_loss_continuity(self):
         self.loss_continuity = tf.reduce_mean(tf.log(self.outputs_con_tar + 1e-12)) + \
