@@ -478,6 +478,7 @@ def train():
                 try:
                     start_time = time.perf_counter()
                     step += 1
+                    # print("step", step)
 
                     step_loss, summary, _ = train_model.step(sess)
                     train_writer.add_summary(summary, step)
