@@ -1127,10 +1127,11 @@ class Seq2seq(BaseModel):
         with tf.control_dependencies(update_ops):
             params = tf.trainable_variables()
 
-            gradients = tf.gradients(self.loss, params)
+            params_gen = [var for var in params if not "continuity" in var.name and not "fidelity" in var.name]
+            gradients = tf.gradients(self.loss, params_gen)
             # In case you want to do anything to the gradients, here you could do it.
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.max_gradient_norm)
-            self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params),
+            self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params_gen),
                                                               global_step=self.global_step)
 
             params_disc = [var for var in params if "continuity" in var.name or "fidelity" in var.name]
