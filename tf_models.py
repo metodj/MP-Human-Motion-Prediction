@@ -1254,7 +1254,7 @@ class Seq2seq(BaseModel):
                                ]
 
                 outputs = session.run(output_feed)
-                print("loss", outputs[0])
+                # print("loss", outputs[0])
                 return outputs[0], outputs[1], outputs[2]
             else:
                 # Update discriminator parameters
@@ -1272,7 +1272,7 @@ class Seq2seq(BaseModel):
                                ]
                 outputs = session.run(output_feed)
 
-                if outputs[7] < 5:
+                if outputs[7] % 20:
 
                     print("loss", outputs[0])
                     print("loss_fidelity", outputs[5])
