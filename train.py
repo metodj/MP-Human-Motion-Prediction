@@ -58,6 +58,7 @@ parser.add_argument("--samp_loss", action="store_true", help="sampling loss: rnn
 
 parser.add_argument("--log", action="store_true", help="create log file")
 parser.add_argument("--fidelity", action="store_true", help="fidelity discriminator")
+parser.add_argument("--continuity", action="store_true", help="continuity discriminator")
 parser.add_argument("--lambda_", type=float, default=0.6, help="regularization parameter for discriminators")
 
 ARGS = parser.parse_args()
@@ -386,6 +387,7 @@ def get_seq2seq_config(args):
     config["loss"] = args.loss
     config["sampling_loss"] = args.samp_loss
     config["fidelity"] = args.fidelity
+    config["continuity"] = args.continuity
     config["lambda_"] = args.lambda_
 
     model_cls = models.Seq2seq

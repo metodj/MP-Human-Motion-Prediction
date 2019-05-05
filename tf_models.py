@@ -957,6 +957,7 @@ class Seq2seq(BaseModel):
         self.residuals = self.config["residuals"]
         self.sampling_loss = self.config["sampling_loss"]
         self.fidelity = self.config["fidelity"]
+        self.continuity = self.config["continuity"]
         self.lambda_ = self.config["lambda_"]
 
         # Prepare some members that need to be set when creating the graph.
@@ -982,6 +983,19 @@ class Seq2seq(BaseModel):
         self.state_fid_pred = None
         self.state_fid_tar = None
         self.loss_fidelity = None
+
+        # continuity discriminator
+        self.continuity_linear = None # continuity linear layer reference
+        self.inputs_hidden_con_tar = None
+        self.inputs_hidden_con_pred = None
+        self.cell_continuity = None
+        self.continuity_linear_out = None
+        self.outputs_con_tar = None
+        self.outputs_con_pred = None
+        self.initial_states_continuity = None
+        self.state_con_pred = None
+        self.state_con_tar = None
+        self.loss_continuity = None
 
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
@@ -1031,16 +1045,19 @@ class Seq2seq(BaseModel):
                 cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                 cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                 cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                 cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                 cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
             self.cell = cell
             self.cell_decoder = cell_decoder
             self.cell_fidelity = cell_fidelity
+            self.cell_continuity = cell_continuity
 
     def build_fidelity_input(self):
         """Fidelity linear input layer."""
@@ -1067,7 +1084,33 @@ class Seq2seq(BaseModel):
         self.loss_fidelity = tf.reduce_mean(tf.log(self.outputs_fid_tar + 1e-12)) + \
                              tf.reduce_mean(1 - tf.log(self.outputs_fid_pred + 1e-12))
 
-        self.loss = self.loss + self.lambda_ * self.loss_fidelity
+        self.loss = self.loss - self.lambda_ * self.loss_fidelity
+
+    def build_continuity_input(self):
+        """continuity linear input layer."""
+        if self.input_hidden_size is not None:
+            with tf.variable_scope("input_continuity", reuse=self.reuse):
+                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+
+                self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
+                self.inputs_hidden_con_pred = self.continuity_linear(tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
+        else:
+            self.inputs_hidden_con_tar = self.data_inputs
+            self.inputs_hidden_con_pred = tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1)
+
+    def build_continuity_output(self):
+        """Linear layer for continuity output."""
+        with tf.variable_scope("continuity_output", reuse=self.reuse):
+            self.continuity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
+
+            self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar)
+            self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred)
+
+    def build_loss_continuity(self):
+        self.loss_continuity = tf.reduce_mean(tf.log(self.outputs_con_tar + 1e-12)) + \
+                             tf.reduce_mean(1 - tf.log(self.outputs_con_pred + 1e-12))
+
+        self.loss = self.loss - self.lambda_ * self.loss_continuity
 
     def build_network(self):
         """Build the core part of the model."""
@@ -1077,6 +1120,7 @@ class Seq2seq(BaseModel):
         # Zero states
         self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
         self.initial_states_fidelity = self.cell_fidelity.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
+        self.initial_states_continuity = self.cell_continuity.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
 
         # RNN
         with tf.variable_scope("rnn_encoder", reuse=self.reuse):
@@ -1132,6 +1176,24 @@ class Seq2seq(BaseModel):
                                                            dtype=tf.float32)
             self.build_fidelity_output()
             self.build_loss_fidelity()
+
+        if self.continuity:
+            self.build_continuity_input()
+
+            with tf.variable_scope("rnn_continuity", reuse=self.reuse):
+                _, self.state_con_tar = tf.nn.dynamic_rnn(self.cell_continuity,
+                                                          self.inputs_hidden_con_tar,
+                                                          sequence_length=self.source_seq_len + self.prediction_seq_len,
+                                                          initial_state=self.initial_states_continuity,
+                                                          dtype=tf.float32)
+
+                _, self.state_con_pred = tf.nn.dynamic_rnn(self.cell_continuity,
+                                                           self.inputs_hidden_con_pred,
+                                                           sequence_length=self.source_seq_len + self.prediction_seq_len,
+                                                           initial_state=self.initial_states_continuity,
+                                                           dtype=tf.float32)
+            self.build_continuity_output()
+            self.build_loss_continuity()
 
     def residuals_decoder(self):
         if not self.sampling_loss:
