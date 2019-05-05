@@ -1272,12 +1272,11 @@ class Seq2seq(BaseModel):
                                ]
                 outputs = session.run(output_feed)
 
-                if outputs[7] % 20:
-
-                    print("loss", outputs[0])
-                    print("loss_fidelity", outputs[5])
-                    print("loss_continuity", outputs[6])
-                    print("loss_predictor", outputs[0] - self.lambda_*(outputs[6] + outputs[5]))
+                # if outputs[7] % 20:
+                #     print("loss", outputs[0])
+                #     print("loss_fidelity", outputs[5])
+                #     print("loss_continuity", outputs[6])
+                #     print("loss_predictor", outputs[0] - self.lambda_*(outputs[6] + outputs[5]))
 
                 return outputs[0], outputs[1], outputs[2]
 
