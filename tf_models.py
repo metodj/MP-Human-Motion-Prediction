@@ -1086,7 +1086,8 @@ class Seq2seq(BaseModel):
         self.loss_fidelity = tf.reduce_mean(tf.log(self.outputs_fid_tar + 1e-12)) + \
                              tf.reduce_mean(tf.log(1 - self.outputs_fid_pred + 1e-12))
 
-        self.loss = self.loss + self.lambda_ * self.loss_fidelity
+        # self.loss = self.loss - self.lambda_ * tf.reduce_mean(tf.log(self.outputs_fid_pred + 1e-12))
+        self.loss = self.loss + self.lambda_ * tf.reduce_mean(tf.log(1 - self.outputs_fid_pred + 1e-12))
 
     def build_continuity_input(self):
         """continuity linear input layer."""
@@ -1112,7 +1113,8 @@ class Seq2seq(BaseModel):
         self.loss_continuity = tf.reduce_mean(tf.log(self.outputs_con_tar + 1e-12)) + \
                              tf.reduce_mean(tf.log(1 - self.outputs_con_pred + 1e-12))
 
-        self.loss = self.loss + self.lambda_ * self.loss_continuity
+        # self.loss = self.loss - self.lambda_ * tf.reduce_mean(tf.log(self.outputs_con_pred + 1e-12))
+        self.loss = self.loss + self.lambda_ * tf.reduce_mean(tf.log(1 - self.outputs_con_pred + 1e-12))
 
     def optimization_routines(self):
         """Add an optimizer."""
@@ -1134,10 +1136,11 @@ class Seq2seq(BaseModel):
             self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params_gen),
                                                               global_step=self.global_step)
 
-            params_disc = [var for var in params if "continuity" in var.name or "fidelity" in var.name]
-            gradients_disc = tf.gradients(- (self.loss_fidelity + self.loss_continuity), params_disc)
-            clipped_gradients_disc, _ = tf.clip_by_global_norm(gradients_disc, self.max_gradient_norm)
-            self.parameter_update_disc = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients_disc, params_disc))
+            if self.fidelity:
+                params_disc = [var for var in params if "continuity" in var.name or "fidelity" in var.name]
+                gradients_disc = tf.gradients(- (self.loss_fidelity + self.loss_continuity), params_disc)
+                clipped_gradients_disc, _ = tf.clip_by_global_norm(gradients_disc, self.max_gradient_norm)
+                self.parameter_update_disc = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients_disc, params_disc))
 
     def build_network(self):
         """Build the core part of the model."""
@@ -1248,20 +1251,10 @@ class Seq2seq(BaseModel):
                                self.summary_update,
                                self.outputs,
                                self.parameter_update,
-                               self.loss_fidelity,
-                               self.loss_continuity,
-                               self.global_step,
                                ]
 
                 outputs = session.run(output_feed)
-                if outputs[6] < 10:
-
-                    print("lambda_", self.lambda_)
-                    print("loss", outputs[0])
-                    print("loss_fidelity", outputs[4])
-                    print("loss_continuity", outputs[5])
-                    print("loss_predictor", outputs[0] + self.lambda_*(outputs[4] + outputs[5]))
-
+                print("loss", outputs[0])
                 return outputs[0], outputs[1], outputs[2]
             else:
                 # Update discriminator parameters
