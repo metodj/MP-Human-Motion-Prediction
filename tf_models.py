@@ -100,11 +100,21 @@ class BaseModel(object):
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
         with tf.control_dependencies(update_ops):
             params = tf.trainable_variables()
+
             gradients = tf.gradients(self.loss, params)
             # In case you want to do anything to the gradients, here you could do it.
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.max_gradient_norm)
             self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params),
                                                               global_step=self.global_step)
+            #
+            # params_disc = [var for var in params if "continuity" in var.name or "fidelity" in var.name]
+            # gradients = tf.gradients(self.loss_fidelity + self.loss_continuity, params)
+            # clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.max_gradient_norm)
+            # self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params),
+            #                                                   global_step=self.global_step)
+
+
+
 
     def build_output_layer(self):
         """Build the final dense output layer without any activation."""
@@ -1082,7 +1092,7 @@ class Seq2seq(BaseModel):
 
     def build_loss_fidelity(self):
         self.loss_fidelity = tf.reduce_mean(tf.log(self.outputs_fid_tar + 1e-12)) + \
-                             tf.reduce_mean(1 - tf.log(self.outputs_fid_pred + 1e-12))
+                             tf.reduce_mean(tf.log(1 - self.outputs_fid_pred + 1e-12))
 
         self.loss = self.loss - self.lambda_ * self.loss_fidelity
 
@@ -1108,7 +1118,7 @@ class Seq2seq(BaseModel):
 
     def build_loss_continuity(self):
         self.loss_continuity = tf.reduce_mean(tf.log(self.outputs_con_tar + 1e-12)) + \
-                             tf.reduce_mean(1 - tf.log(self.outputs_con_pred + 1e-12))
+                             tf.reduce_mean(tf.log(1 - self.outputs_con_pred + 1e-12))
 
         self.loss = self.loss - self.lambda_ * self.loss_continuity
 
@@ -1219,8 +1229,21 @@ class Seq2seq(BaseModel):
             output_feed = [self.loss,
                            self.summary_update,
                            self.outputs,
-                           self.parameter_update]
+                           self.parameter_update,
+                           self.loss_fidelity,
+                           self.loss_continuity,
+                           self.global_step,
+                           ]
+
             outputs = session.run(output_feed)
+            if outputs[6] < 5:
+
+                print("lambda_", self.lambda_)
+                print("loss", outputs[0])
+                print("loss_fidelity", outputs[4])
+                print("loss_continuity", outputs[5])
+                print("loss_predictor", outputs[0] + self.lambda_*(outputs[4] + outputs[5]))
+
             return outputs[0], outputs[1], outputs[2]
         else:
             # Evaluation step (no backprop).
