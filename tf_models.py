@@ -969,10 +969,7 @@ class Seq2seq(BaseModel):
         self.inputs_hidden = None  # The inputs to the decoder
 
         # How many steps we must predict.
-        if self.is_training:
-            self.sequence_length = self.target_seq_len
-        else:
-            self.sequence_length = self.target_seq_len
+        self.sequence_length = self.target_seq_len
 
         self.inputs_encoder = self.data_inputs[:, :self.source_seq_len-1, :]  # 0:119 -> 119 frames (seed without last)
 
