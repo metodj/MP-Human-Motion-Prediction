@@ -38,7 +38,7 @@ parser.add_argument("--batch_size", type=int, default=16, help="Batch size to us
 
 # Architecture
 parser.add_argument("--model_type", type=str, default="dummy", help="Model to train.")
-parser.add_argument("--cell_type", type=str, default="lstm", help="RNN cell type: lstm, gru")
+parser.add_argument("--cell_type", type=str, default="gru", help="RNN cell type: lstm, gru")
 parser.add_argument("--cell_size", type=int, default=256, help="RNN cell size.")
 parser.add_argument("--input_hidden_size", type=int, default=None, help="Input dense layer before the recurrent cell.")
 parser.add_argument("--activation_fn", type=str, default=None, help="Activation Function on the output.")
@@ -57,6 +57,8 @@ parser.add_argument("--loss", type=str, default="mse", help="mean squared error 
 parser.add_argument("--samp_loss", action="store_true", help="sampling loss: rnn output from previous is feed to input")
 
 parser.add_argument("--log", action="store_true", help="create log file")
+parser.add_argument("--fidelity", action="store_true", help="fidelity discriminator")
+parser.add_argument("--lambda_", type=float, default=0.6, help="regularization parameter for discriminators")
 
 ARGS = parser.parse_args()
 # EXPERIMENT_TIMESTAMP = str(int(time.time()))
@@ -383,6 +385,8 @@ def get_seq2seq_config(args):
     config['optimizer'] = args.optimizer
     config["loss"] = args.loss
     config["sampling_loss"] = args.samp_loss
+    config["fidelity"] = args.fidelity
+    config["lambda_"] = args.lambda_
 
     model_cls = models.Seq2seq
 

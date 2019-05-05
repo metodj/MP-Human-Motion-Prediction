@@ -956,6 +956,8 @@ class Seq2seq(BaseModel):
         self.input_hidden_size = self.config.get("input_hidden_size")
         self.residuals = self.config["residuals"]
         self.sampling_loss = self.config["sampling_loss"]
+        self.fidelity = self.config["fidelity"]
+        self.lambda_ = self.config["lambda_"]
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
@@ -967,6 +969,19 @@ class Seq2seq(BaseModel):
         self.rnn_state_decoder = None
         self.inputs_hidden_encoder = None # The inputs to the encoder
         self.inputs_hidden = None  # The inputs to the decoder
+
+        # Fidelity discriminator
+        self.fidelity_linear = None # Fidelity linear layer reference
+        self.inputs_hidden_fid_tar = None
+        self.inputs_hidden_fid_pred = None
+        self.cell_fidelity = None
+        self.fidelity_linear_out = None
+        self.outputs_fid_tar = None
+        self.outputs_fid_pred = None
+        self.initial_states_fidelity = None
+        self.state_fid_pred = None
+        self.state_fid_tar = None
+        self.loss_fidelity = None
 
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
@@ -1001,10 +1016,10 @@ class Seq2seq(BaseModel):
 
             with tf.variable_scope("input_layer", reuse=self.reuse):
                 self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                     tf.nn.relu, reuse=self.reuse)
+                                                     activation=None, reuse=self.reuse)
             with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
                 self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                             tf.nn.relu, reuse=self.reuse)
+                                                             activation=None, reuse=self.reuse)
         else:
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
@@ -1015,31 +1030,62 @@ class Seq2seq(BaseModel):
             if self.cell_type == C.LSTM:
                 cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                 cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                 cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
             self.cell = cell
             self.cell_decoder = cell_decoder
+            self.cell_fidelity = cell_fidelity
+
+    def build_fidelity_input(self):
+        """Fidelity linear input layer."""
+        if self.input_hidden_size is not None:
+            with tf.variable_scope("input_fidelity", reuse=self.reuse):
+                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+
+                self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
+                self.inputs_hidden_fid_pred = self.fidelity_linear(
+                    self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
+        else:
+            self.inputs_hidden_fid_tar = self.prediction_targets
+            self.inputs_hidden_fid_pred = self.outputs
+
+    def build_fidelity_output(self):
+        """Linear layer for fidelity output."""
+        with tf.variable_scope("fidelity_output", reuse=self.reuse):
+            self.fidelity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
+
+            self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar)
+            self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred)
+
+    def build_loss_fidelity(self):
+        self.loss_fidelity = tf.reduce_mean(tf.log(self.outputs_fid_tar + 1e-12)) + \
+                             tf.reduce_mean(1 - tf.log(self.outputs_fid_pred + 1e-12))
+
+        self.loss = self.loss + self.lambda_ * self.loss_fidelity
 
     def build_network(self):
         """Build the core part of the model."""
         self.build_input_layer()
         self.build_cell()
 
+        # Zero states
         self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
-        # encoder
-        with tf.variable_scope("rnn_layer_encoder", reuse=self.reuse):
+        self.initial_states_fidelity = self.cell_fidelity.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
 
+        # RNN
+        with tf.variable_scope("rnn_encoder", reuse=self.reuse):
             _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder,
                                                   sequence_length=self.prediction_seq_len_encoder,
                                                   initial_state=self.initial_states,
                                                   dtype=tf.float32)
 
-        # decoder
-        with tf.variable_scope("rnn_layer", reuse=self.reuse):
+        with tf.variable_scope("rnn_decoder", reuse=self.reuse):
             self.initial_states_decoder = self.rnn_state
 
             if not self.sampling_loss:
@@ -1066,7 +1112,26 @@ class Seq2seq(BaseModel):
         self.build_output_layer()
         if self.residuals:
             self.residuals_decoder()
+
         self.build_loss()
+
+        if self.fidelity:
+            self.build_fidelity_input()
+
+            with tf.variable_scope("rnn_fidelity", reuse=self.reuse):
+                _, self.state_fid_tar = tf.nn.dynamic_rnn(self.cell_fidelity,
+                                                          self.inputs_hidden_fid_tar,
+                                                          sequence_length=self.prediction_seq_len,
+                                                          initial_state=self.initial_states_fidelity,
+                                                          dtype=tf.float32)
+
+                _, self.state_fid_pred = tf.nn.dynamic_rnn(self.cell_fidelity,
+                                                           self.inputs_hidden_fid_pred,
+                                                           sequence_length=self.prediction_seq_len,
+                                                           initial_state=self.initial_states_fidelity,
+                                                           dtype=tf.float32)
+            self.build_fidelity_output()
+            self.build_loss_fidelity()
 
     def residuals_decoder(self):
         if not self.sampling_loss:
