@@ -776,7 +776,9 @@ class Seq2seq(BaseModel):
                 for t in range(self.sequence_length):
                     seed_, state = self.cell_decoder(inputs=seed,
                                                      state=state)
-                    seed_ = tf.add(self.decoder_linear_output(seed_), seed)  # up-project and add residual
+                    seed_ = self.decoder_linear_output(seed_)
+                    if self.residuals:
+                        seed_ = tf.add(seed_, seed)  # down-project and add residual
                     self.output_decoder_sampl_loss = seed_
                     self.rnn_outputs.append(seed_)
                     seed = seed_
@@ -951,7 +953,7 @@ class Seq2seq(BaseModel):
         # Now create predictions step-by-step.
         if not self.sampling_loss:
             prediction = seed_decoder[:, np.newaxis, :]
-            predictions = [prediction]
+            predictions = []
 
             for step in range(prediction_steps):
                 # get the prediction
@@ -962,8 +964,9 @@ class Seq2seq(BaseModel):
 
                 predictions.append(prediction)
 
-            predictions.pop(0)  # remove first element, then repair range()
-            predictions = np.concatenate(predictions, axis=1)
+            # predictions.pop(0)  # remove first element, then repair range()
+            # predictions = np.concatenate(predictions, axis=1)
+            predictions = np.stack(predictions, axis=1).reshape((seed_decoder.shape[0], self.sequence_length, self.input_size))
 
         else:
             prediction = seed_decoder
