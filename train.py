@@ -498,6 +498,9 @@ def train():
                     if epoch >= ARGS.num_epochs:
                         stop_signal = True
                         break
+                # COMMENT when running on Leonhard
+                #stop_signal = True
+                #break
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
