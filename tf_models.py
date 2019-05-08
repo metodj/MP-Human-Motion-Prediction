@@ -52,7 +52,6 @@ class BaseModel(object):
         self.learning_rate = config["learning_rate"]  # Learning rate.
         self.parameter_update = None  # The training op.
         self.summary_update = None  # Summary op.
-        self.max_gradient_norm = 5.0
 
         # Hard-coded parameters that define the input size.
         self.JOINT_SIZE = 3*3
@@ -625,7 +624,7 @@ class Seq2seq(BaseModel):
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
 
-        print("inputs_hidden:\t", self.inputs_hidden.get_shape())
+        # print("inputs_hidden:\t", self.inputs_hidden.get_shape())
 
     def build_cell(self):
         """Create recurrent cell."""
@@ -765,6 +764,10 @@ class Seq2seq(BaseModel):
                                                                              dtype=tf.float32)
                 self.prediction_representation = self.rnn_outputs
 
+                self.build_output_layer()
+                if self.residuals:
+                    self.residuals_decoder()
+
             else:
                 with tf.variable_scope("linear_decoder_sampl_loss_", reuse=self.reuse):
                     self.decoder_linear_output = tf.layers.Dense(self.input_size, use_bias=True, activation=None)
@@ -786,12 +789,7 @@ class Seq2seq(BaseModel):
                 self.rnn_state_decoder = state
                 self.rnn_outputs = tf.transpose(tf.stack(self.rnn_outputs), perm=[1, 0, 2])
 
-            self.outputs = self.rnn_outputs
-
-        if not self.sampling_loss:
-            self.build_output_layer()
-            if self.residuals:
-                self.residuals_decoder()
+                self.outputs = self.rnn_outputs
 
         self.build_loss()
 
