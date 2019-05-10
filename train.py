@@ -60,6 +60,7 @@ parser.add_argument("--log", action="store_true", help="create log file")
 parser.add_argument("--fidelity", action="store_true", help="fidelity discriminator")
 parser.add_argument("--continuity", action="store_true", help="continuity discriminator")
 parser.add_argument("--lambda_", type=float, default=0.6, help="regularization parameter for discriminators")
+parser.add_argument("--activation_input", type=str, default=None, help="input layer activation")
 
 ARGS = parser.parse_args()
 # EXPERIMENT_TIMESTAMP = str(int(time.time()))
@@ -389,6 +390,7 @@ def get_seq2seq_config(args):
     config["fidelity"] = args.fidelity
     config["continuity"] = args.continuity
     config["lambda_"] = args.lambda_
+    config["activation_input"] = args.activation_input
 
     model_cls = models.Seq2seq
 

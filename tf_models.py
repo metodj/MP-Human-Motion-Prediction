@@ -15,6 +15,7 @@ import tensorflow as tf
 from constants import Constants as C
 from utils import get_activation_fn
 from utils import geodesic_distance
+from motion_metrics import get_closest_rotmat
 
 
 class BaseModel(object):
@@ -31,6 +32,7 @@ class BaseModel(object):
         self.target_seq_len = config["target_seq_len"]  # Length of the predictions to be made.
         self.batch_size = config["batch_size"]  # Batch size.
         self.activation_fn_out = get_activation_fn(config["activation_fn"])  # Output activation function.
+        self.activation_fn_in = get_activation_fn(config["activation_input"])  # Input activation function.
         self.data_inputs = data_pl[C.BATCH_INPUT]  # Tensor of shape (batch_size, seed length + target length)
         self.data_targets = data_pl[C.BATCH_TARGET]  # Tensor of shape (batch_size, seed length + target length)
         self.data_seq_len = data_pl[C.BATCH_SEQ_LEN]  # Tensor of shape (batch_size, )
@@ -1032,10 +1034,10 @@ class Seq2seq(BaseModel):
 
             with tf.variable_scope("input_layer", reuse=self.reuse):
                 self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                     activation=None, reuse=self.reuse)
+                                                     activation=self.activation_fn_in, reuse=self.reuse)
             with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
                 self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                             activation=None, reuse=self.reuse)
+                                                             activation=self.activation_fn_in, reuse=self.reuse)
         else:
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
@@ -1331,6 +1333,13 @@ class Seq2seq(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
+
+        batch_size = predictions.shape[0]
+        seq_length = predictions.shape[1]
+        pred_val = np.reshape(predictions, [-1, self.NUM_JOINTS, 3, 3])  # (64, 24, 135)
+        predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
+        predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
+
         return predictions, seed, data_id
 
     def sample(self, session, seed_sequence, prediction_steps):

@@ -33,6 +33,10 @@ def get_activation_fn(activation=C.RELU):
         return None
     elif activation == C.RELU:
         return tf.nn.relu
+    elif activation == C.TANH:
+        return tf.nn.tanh
+    elif activation == C.SIGMOID:
+        return tf.nn.sigmoid
     else:
         raise Exception("Activation function is not implemented.")
 
