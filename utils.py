@@ -109,3 +109,47 @@ def geodesic_distance(x1, x2):
     a_norm = tf.clip_by_value(a_norm, -1.0, 1.0)  # Account for numerical errors
 
     return tf.reduce_mean(tf.abs(tf.asin(a_norm)))
+
+
+def is_rotmat(r):
+    rt = np.transpose(r)
+    n = np.linalg.norm(np.eye(3, dtype=r.dtype) - np.dot(rt, r))
+    return n < 1e-6
+
+
+def rotmat_to_euler(r):
+    assert (is_rotmat(r))
+
+    sy = np.sqrt(r[0, 0] * r[0, 0] + r[1, 0] * r[1, 0])
+    singular = sy < 1e-6
+
+    if not singular:
+        x = np.arctan2(r[2, 1], r[2, 2])
+        y = np.arctan2(-r[2, 0], sy)
+        z = np.arctan2(r[1, 0], r[0, 0])
+    else:
+        x = np.arctan2(-r[1, 2], r[1, 1])
+        y = np.arctan2(-r[2, 0], sy)
+        z = 0
+
+    return np.array([x, y, z])
+
+
+def euler_to_rotmat(theta):
+    r_x = np.array([[1, 0, 0],
+                    [0, np.cos(theta[0]), -np.sin(theta[0])],
+                    [0, np.sin(theta[0]), np.cos(theta[0])]
+                    ])
+
+    r_y = np.array([[np.cos(theta[1]), 0, np.sin(theta[1])],
+                    [0, 1, 0],
+                    [-np.sin(theta[1]), 0, np.cos(theta[1])]
+                    ])
+
+    r_z = np.array([[np.cos(theta[2]), -np.sin(theta[2]), 0],
+                    [np.sin(theta[2]), np.cos(theta[2]), 0],
+                    [0, 0, 1]
+                    ])
+
+    r = np.dot(r_z, np.dot(r_y, r_x))
+    return r

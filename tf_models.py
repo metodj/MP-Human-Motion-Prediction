@@ -1031,7 +1031,6 @@ class Seq2seq(BaseModel):
         """
         # We could e.g. pass them through a dense layer
         if self.input_hidden_size is not None:
-
             with tf.variable_scope("input_layer", reuse=self.reuse):
                 self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                      activation=self.activation_fn_in, reuse=self.reuse)
@@ -1067,7 +1066,8 @@ class Seq2seq(BaseModel):
         """Fidelity linear input layer."""
         if self.input_hidden_size is not None:
             with tf.variable_scope("input_fidelity", reuse=self.reuse):
-                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                       activation=self.activation_fn_in)
 
                 self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
                 self.inputs_hidden_fid_pred = self.fidelity_linear(
@@ -1099,10 +1099,12 @@ class Seq2seq(BaseModel):
         """continuity linear input layer."""
         if self.input_hidden_size is not None:
             with tf.variable_scope("input_continuity", reuse=self.reuse):
-                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                         activation=self.activation_fn_in)
 
                 self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
-                self.inputs_hidden_con_pred = self.continuity_linear(tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
+                self.inputs_hidden_con_pred = self.continuity_linear(
+                    tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
         else:
             self.inputs_hidden_con_tar = self.data_inputs
             self.inputs_hidden_con_pred = tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1)
@@ -1194,6 +1196,7 @@ class Seq2seq(BaseModel):
             self.prediction_representation = self.rnn_outputs
 
         self.build_output_layer()
+
         if self.residuals:
             self.residuals_decoder()
 

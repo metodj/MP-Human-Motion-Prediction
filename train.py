@@ -42,6 +42,7 @@ parser.add_argument("--cell_type", type=str, default="gru", help="RNN cell type:
 parser.add_argument("--cell_size", type=int, default=256, help="RNN cell size.")
 parser.add_argument("--input_hidden_size", type=int, default=None, help="Input dense layer before the recurrent cell.")
 parser.add_argument("--activation_fn", type=str, default=None, help="Activation Function on the output.")
+parser.add_argument("--activation_input", type=str, default=None, help="input layer activation")
 
 # Training
 parser.add_argument("--num_epochs", type=int, default=5, help="Number of training epochs.")
@@ -60,7 +61,9 @@ parser.add_argument("--log", action="store_true", help="create log file")
 parser.add_argument("--fidelity", action="store_true", help="fidelity discriminator")
 parser.add_argument("--continuity", action="store_true", help="continuity discriminator")
 parser.add_argument("--lambda_", type=float, default=0.6, help="regularization parameter for discriminators")
-parser.add_argument("--activation_input", type=str, default=None, help="input layer activation")
+
+# data representation
+parser.add_argument("--to_angles", action="store_true", help="use angle representation")
 
 ARGS = parser.parse_args()
 # EXPERIMENT_TIMESTAMP = str(int(time.time()))
@@ -108,7 +111,8 @@ def create_model(session):
                                            shuffle=True,
                                            extract_windows_of=window_length,
                                            extract_random_windows=True,
-                                           num_parallel_calls=16)
+                                           num_parallel_calls=16,
+                                           to_angles=config["to_angles"])
         train_pl = train_data.get_tf_samples()
 
         print("train_pl\t", str(type(train_pl)))
@@ -122,7 +126,8 @@ def create_model(session):
                                            shuffle=False,
                                            extract_windows_of=window_length,
                                            extract_random_windows=False,
-                                           num_parallel_calls=16)
+                                           num_parallel_calls=16,
+                                           to_angles=config["to_angles"])
         valid_pl = valid_data.get_tf_samples()
         print("valid_pl\t", str(type(valid_pl)))
         print(valid_pl.keys())
@@ -217,6 +222,7 @@ def get_dummy_config(args):
     config['residuals'] = args.residuals
     config['optimizer'] = args.optimizer
     config["loss"] = args.loss
+    config["to_angles"] = args.to_angles
 
     model_cls = models.DummyModel
 
@@ -259,6 +265,7 @@ def get_model_v1_config(args):
     config['activation_fn'] = args.activation_fn
     config['optimizer'] = args.optimizer
     config["loss"] = args.loss
+    config["to_angles"] = args.to_angles
 
     model_cls = models.ModelV1
 
@@ -301,6 +308,7 @@ def get_model_v2_config(args):
     config['activation_fn'] = args.activation_fn
     config['optimizer'] = args.optimizer
     config["loss"] = args.loss
+    config["to_angles"] = args.to_angles
 
     model_cls = models.ModelV2
 
@@ -391,6 +399,7 @@ def get_seq2seq_config(args):
     config["continuity"] = args.continuity
     config["lambda_"] = args.lambda_
     config["activation_input"] = args.activation_input
+    config["to_angles"] = args.to_angles
 
     model_cls = models.Seq2seq
 
