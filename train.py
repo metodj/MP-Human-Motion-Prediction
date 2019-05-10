@@ -52,7 +52,7 @@ parser.add_argument("--use_cpu", action="store_true", help="Use CPU instead of G
 parser.add_argument("--experiment_name", type=str, default=None, help="A descriptive name for the experiment.")
 
 #seq2seq
-parser.add_argument("--residuals", action="store_false", help="Use of residuals in the decoder part of seq2seq model.")
+parser.add_argument("--residuals", action="store_true", help="Use of residuals in the decoder part of seq2seq model.")
 parser.add_argument("--optimizer", type=str, default="Adam", help="optimizer: Adam or SGD")
 parser.add_argument("--loss", type=str, default="mse", help="mean squared error (mse) or geodesic (geo) loss")
 parser.add_argument("--samp_loss", action="store_true", help="sampling loss: rnn output from previous is feed to input")

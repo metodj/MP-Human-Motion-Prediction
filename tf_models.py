@@ -953,6 +953,8 @@ class Seq2seq(BaseModel):
     def __init__(self, config, data_pl, mode, reuse, **kwargs):
         super(Seq2seq, self).__init__(config, data_pl, mode, reuse, **kwargs)
 
+        print(self.config)
+
         # Extract some config parameters specific to this model
         self.cell_type = self.config["cell_type"]
         self.cell_size = self.config["cell_size"]
