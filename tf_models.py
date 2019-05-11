@@ -56,10 +56,18 @@ class BaseModel(object):
         self.summary_update = None  # Summary op.
 
         # Hard-coded parameters that define the input size.
-        self.JOINT_SIZE = 3*3
-        self.NUM_JOINTS = 15
-        self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
-        self.input_size = self.HUMAN_SIZE
+        # Feature representation
+        self.to_angles = self.config["to_angles"]
+        if not self.to_angles:
+            self.JOINT_SIZE = 3*3
+            self.NUM_JOINTS = 15
+            self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
+            self.input_size = self.HUMAN_SIZE
+        else:
+            self.JOINT_SIZE = 3
+            self.NUM_JOINTS = 15
+            self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
+            self.input_size = self.HUMAN_SIZE
 
     def build_graph(self):
         """Build this model, i.e. its computational graph."""
@@ -81,11 +89,15 @@ class BaseModel(object):
             targets_pose = self.prediction_targets
 
         with tf.name_scope("loss"):
-            if self.loss == "geo":
-                # Geodesic loss
-                self.loss = geodesic_distance(targets_pose, predictions_pose)
+            if not self.to_angles:
+                if self.loss == "geo":
+                    # Geodesic loss
+                    self.loss = geodesic_distance(targets_pose, predictions_pose)
+                else:
+                    # MSE
+                    diff = targets_pose - predictions_pose
+                    self.loss = tf.reduce_mean(tf.square(diff))
             else:
-                # MSE
                 diff = targets_pose - predictions_pose
                 self.loss = tf.reduce_mean(tf.square(diff))
 
@@ -861,9 +873,6 @@ class Seq2seq(BaseModel):
                 # print("loss", outputs[0])
                 return outputs[0], outputs[1], outputs[2]
             else:
-                # Update discriminator parameters
-                # _ = session.run(self.parameter_update_disc)
-
                 # Update all
                 output_feed = [self.loss,
                                self.summary_update,
@@ -976,7 +985,8 @@ class Seq2seq(BaseModel):
 
             # predictions.pop(0)  # remove first element, then repair range()
             # predictions = np.concatenate(predictions, axis=1)
-            predictions = np.stack(predictions, axis=1).reshape((seed_decoder.shape[0], self.sequence_length, self.input_size))
+            predictions = np.stack(predictions, axis=1).reshape((seed_decoder.shape[0],
+                                                                 self.sequence_length, self.input_size))
 
         else:
             prediction = seed_decoder

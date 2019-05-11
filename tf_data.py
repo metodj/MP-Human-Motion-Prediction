@@ -14,7 +14,7 @@ import numpy as np
 import os
 import functools
 
-from utils import rotmat_to_euler
+from utils import rotmats_to_eulers
 from constants import Constants as C
 
 
@@ -160,7 +160,7 @@ class TFRecordMotionDataset(Dataset):
         # Speedup.
         self.tf_data = self.tf_data.prefetch(2)
         # UNCOMMENT when running on Leonhard
-        self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
+        # self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
 
     def _pp_filter(self, sample):
         """Filter out samples that are smaller then the required window size."""
@@ -238,19 +238,12 @@ class TFRecordMotionDataset(Dataset):
         """
         def _my_np_func(p):
             """
-            Args: r # (num_poses, 135)
+            Args:
+                p # (num_poses, 15 * 3 * 3)
+            Returns:
+                a # (num_poses, 15 * 3)
             """
-            p = np.reshape(p, newshape=(-1, 15, 3, 3))
-            p = np.reshape(p, newshape=(-1, 3, 3))
-
-            a = np.zeros(shape=(p.shape[0], 3))
-
-            for i in range(p.shape[0]):
-                r = p[i, :, :]
-                theta = rotmat_to_euler(r)
-                a[i, :] = theta
-
-            a = np.reshape(a, newshape=(-1, 15*3*3))
+            a = rotmats_to_eulers(p)
             return a
 
         # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can
