@@ -41,7 +41,7 @@ parser.add_argument("--batch_size", type=int, default=16, help="Batch size to us
 
 # Architecture
 parser.add_argument("--model_type", type=str, default="dummy", help="Model to train.")
-parser.add_argument("--cell_type", type=str, default="gru", help="RNN cell type: lstm, gru")
+parser.add_argument("--cell_type", type=str, default="lstm", help="RNN cell type: lstm, gru")
 parser.add_argument("--cell_size", type=int, default=256, help="RNN cell size.")
 parser.add_argument("--input_hidden_size", type=int, default=None, help="Input dense layer before the recurrent cell.")
 parser.add_argument("--activation_fn", type=str, default=None, help="Activation Function on the output.")
@@ -418,7 +418,7 @@ def train():
                         train_loss_avg = train_loss / ARGS.print_every
                         time_elapsed = time_counter / ARGS.print_every
                         train_loss, time_counter = 0., 0.
-                        print("Train [{:04d}] \t Loss: {:.3f} \t time/batch: {:.3f}".format(step,
+                        print("Train [{:04d}] \t Loss: {:.5f} \t time/batch: {:.3f}".format(step,
                                                                                             train_loss_avg,
                                                                                             time_elapsed))
 
@@ -434,7 +434,8 @@ def train():
                     stop_signal = True
                     break
 
-            stop_signal = True
+            if ARGS.use_cpu:
+                stop_signal = True
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
