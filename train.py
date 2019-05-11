@@ -265,6 +265,7 @@ def get_zero_velocity_model_config(args):
     config['activation_fn'] = args.activation_fn
     config['optimizer'] = args.optimizer
     config["loss"] = args.loss
+    config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
 
     model_cls = models.ZeroVelocityModel
@@ -411,7 +412,7 @@ def train():
                     train_loss += step_loss
 
                     time_counter += (time.perf_counter() - start_time)
-                    print("i:", step, "\tloss =", step_loss)
+                    # print("i:", step, "\tloss =", step_loss)
 
                     if step % ARGS.print_every == 0:
                         train_loss_avg = train_loss / ARGS.print_every
@@ -429,8 +430,11 @@ def train():
                         break
 
                 # COMMENT when running on Leonhard
-                # stop_signal = True
-                # break
+                if ARGS.model_type == "zero_velocity":
+                    stop_signal = True
+                    break
+
+            stop_signal = True
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
@@ -456,7 +460,8 @@ def train():
         print("End of Training.")
 
         print("Evaluating validation set ...")
-        load_latest_checkpoint(sess, saver, experiment_dir)
+        if not train_model.config["model_type"] == "zero_velocity":
+            load_latest_checkpoint(sess, saver, experiment_dir)
         valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
         print("Valid [{:04d}] \t {} \t total_time: {:.3f}".format(step - 1,
                                                                   metrics_engine.get_summary_string(valid_metrics),

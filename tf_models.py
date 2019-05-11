@@ -339,7 +339,9 @@ class DummyModel(BaseModel):
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
         if self.to_angles:
-            targets = eulers_to_rotmats(targets)
+            if targets.shape[1] != 0:
+                targets = eulers_to_rotmats(targets)
+
             predictions = eulers_to_rotmats(predictions)
 
         return predictions, targets, seed_sequence, data_id
@@ -377,12 +379,6 @@ class DummyModel(BaseModel):
         feed_dict = {self.prediction_inputs: seed_sequence,
                      self.prediction_seq_len: seed_seq_len}
         state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
-
-        # print("\n\tsample")
-        # print("\tone_step_seq_len", one_step_seq_len.shape)
-        # print("\tseed_seq_len", seed_sequence.shape)
-        # print("\tstate", len(state), state[0].shape, state[1].shape)
-        # print("\tprediction", prediction.shape)
 
         # Now create predictions step-by-step.
         prediction = prediction[:, -1:]  # Last prediction from seed sequence
@@ -511,6 +507,15 @@ class ZeroVelocityModel(BaseModel):
         seed_sequence = data_sample[:, :self.source_seq_len]
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
+        print("predictions", predictions.shape)
+        print("targets", targets.shape)
+
+        if self.to_angles and targets.shape[1] != 0:
+            targets = eulers_to_rotmats(targets)
+
+        if self.to_angles and predictions.shape[-1] == 45:
+            predictions = eulers_to_rotmats(predictions)
+
         return predictions, targets, seed_sequence, data_id
 
     def predict(self, session):
@@ -525,9 +530,6 @@ class ZeroVelocityModel(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
-
-        if self.to_angles:
-            predictions = eulers_to_rotmats(predictions)
 
         return predictions, seed, data_id
 
@@ -967,6 +969,7 @@ class Seq2seq(BaseModel):
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
         if self.to_angles:
+            targets = eulers_to_rotmats(targets)
             predictions = eulers_to_rotmats(predictions)
 
         # Guarantee valid rotation matrices
