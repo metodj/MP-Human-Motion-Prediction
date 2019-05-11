@@ -1,0 +1,48 @@
+Sender: LSF System <lsfadmin@lo-s4-033>
+Subject: Job 1893781: <python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_testing_gans --model_type seq2seq --residuals --loss geo --optimizer Adam --num_epochs 30 --input_hidden_size 256 --cell_size 256 --log --cell_type lstm> in cluster <leonhard> Done
+
+Job <python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_testing_gans --model_type seq2seq --residuals --loss geo --optimizer Adam --num_epochs 30 --input_hidden_size 256 --cell_size 256 --log --cell_type lstm> was submitted from host <lo-login-01> by user <rsikonja> in cluster <leonhard> at Mon May  6 00:32:53 2019
+Job was executed on host(s) <6*lo-s4-033>, in queue <gpu.4h>, as user <rsikonja> in cluster <leonhard> at Mon May  6 01:00:04 2019
+</cluster/home/rsikonja> was used as the home directory.
+</cluster/home/rsikonja/MP/Slovenia> was used as the working directory.
+Started at Mon May  6 01:00:04 2019
+Terminated at Mon May  6 01:26:28 2019
+Results reported at Mon May  6 01:26:28 2019
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_testing_gans --model_type seq2seq --residuals --loss geo --optimizer Adam --num_epochs 30 --input_hidden_size 256 --cell_size 256 --log --cell_type lstm
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   4800.47 sec.
+    Max Memory :                                 1927 MB
+    Average Memory :                             1759.11 MB
+    Total Requested Memory :                     12288.00 MB
+    Delta Memory :                               10361.00 MB
+    Max Swap :                                   -
+    Max Processes :                              3
+    Max Threads :                                84
+    Run time :                                   1584 sec.
+    Turnaround time :                            3215 sec.
+
+The output (if any) follows:
+
+2019-05-06 01:00:10.127292: I tensorflow/core/platform/cpu_feature_guard.cc:141] Your CPU supports instructions that this TensorFlow binary was not compiled to use: AVX2 FMA
+2019-05-06 01:00:10.386766: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1432] Found device 0 with properties: 
+name: GeForce GTX 1080 Ti major: 6 minor: 1 memoryClockRate(GHz): 1.582
+pciBusID: 0000:06:00.0
+totalMemory: 10.92GiB freeMemory: 10.77GiB
+2019-05-06 01:00:10.386814: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1511] Adding visible gpu devices: 0
+2019-05-06 01:00:11.003217: I tensorflow/core/common_runtime/gpu/gpu_device.cc:982] Device interconnect StreamExecutor with strength 1 edge matrix:
+2019-05-06 01:00:11.003269: I tensorflow/core/common_runtime/gpu/gpu_device.cc:988]      0 
+2019-05-06 01:00:11.003279: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1001] 0:   N 
+2019-05-06 01:00:11.004463: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1115] Created TensorFlow device (/job:localhost/replica:0/task:0/device:GPU:0 with 10060 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:06:00.0, compute capability: 6.1)
+WARNING:tensorflow:From /cluster/home/rsikonja/.virtualenvs/mp-project/lib/python3.6/site-packages/tensorflow_gpu-1.12.0-py3.6-linux-x86_64.egg/tensorflow/python/ops/sparse_ops.py:1165: sparse_to_dense (from tensorflow.python.ops.sparse_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Create a `tf.sparse.SparseTensor` and use `tf.sparse.to_dense` instead.
