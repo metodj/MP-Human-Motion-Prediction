@@ -338,12 +338,9 @@ class DummyModel(BaseModel):
 
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
-        print("\nsampled step")
-        print("data_id", data_id.shape)
-        print("data_sample", data_sample.shape)
-        print("targets", targets.shape)
-        print("seed_sequence", seed_sequence.shape)
-        print("predictions", predictions.shape)
+        if self.to_angles:
+            targets = eulers_to_rotmats(targets)
+            predictions = eulers_to_rotmats(predictions)
 
         return predictions, targets, seed_sequence, data_id
 
@@ -359,9 +356,6 @@ class DummyModel(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
-
-        if self.to_angles:
-            predictions = eulers_to_rotmats(predictions)
 
         return predictions, seed, data_id
 
@@ -384,11 +378,11 @@ class DummyModel(BaseModel):
                      self.prediction_seq_len: seed_seq_len}
         state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
 
-        print("\n\tsample")
-        print("\tone_step_seq_len", one_step_seq_len.shape)
-        print("\tseed_seq_len", seed_sequence.shape)
-        print("\tstate", len(state), state[0].shape, state[1].shape)
-        print("\tprediction", prediction.shape)
+        # print("\n\tsample")
+        # print("\tone_step_seq_len", one_step_seq_len.shape)
+        # print("\tseed_seq_len", seed_sequence.shape)
+        # print("\tstate", len(state), state[0].shape, state[1].shape)
+        # print("\tprediction", prediction.shape)
 
         # Now create predictions step-by-step.
         prediction = prediction[:, -1:]  # Last prediction from seed sequence
@@ -972,6 +966,16 @@ class Seq2seq(BaseModel):
         seed_sequence = data_sample[:, :self.source_seq_len]  # 0:120 -> 120 (seed)
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
+        if self.to_angles:
+            predictions = eulers_to_rotmats(predictions)
+
+        # Guarantee valid rotation matrices
+        batch_size = predictions.shape[0]
+        seq_length = predictions.shape[1]
+        pred_val = np.reshape(predictions, [-1, self.NUM_JOINTS, 3, 3])  # (64, 24, 135)
+        predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
+        predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
+
         return predictions, targets, seed_sequence, data_id
 
     def predict(self, session):
@@ -986,16 +990,6 @@ class Seq2seq(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
-
-        if self.to_angles:
-            predictions = eulers_to_rotmats(predictions)
-
-        # Guarantee valid rotation matrices
-        batch_size = predictions.shape[0]
-        seq_length = predictions.shape[1]
-        pred_val = np.reshape(predictions, [-1, self.NUM_JOINTS, 3, 3])  # (64, 24, 135)
-        predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
-        predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
 
         return predictions, seed, data_id
 

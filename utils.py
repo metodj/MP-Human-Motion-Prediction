@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import zipfile
+import cv2
+from motion_metrics import get_closest_rotmat
 from constants import Constants as C
 
 
@@ -161,25 +163,28 @@ def rotmats_to_eulers(p):
 
     for i in range(p.shape[0]):
         r = p[i, :, :]
-        theta = rotmat_to_euler(r)
-        a[i, :] = theta/np.pi
+        # theta = rotmat_to_euler(r)
+        theta, _ = cv2.Rodrigues(r)
+        a[i, :] = np.reshape(theta, newshape=(3,))/np.pi
 
     a = np.reshape(a, newshape=(-1, 15 * 3))
     return a
 
 
 def eulers_to_rotmats(a):
-    a = np.reshape(a, newshape=(-1, 3))
-    p = np.zeros(shape=(a.shape[0], 9), dtype=np.float32)
+    s = a.shape  # (16, 24, 45)
 
-    for i in range(a.shape[0]):
-        theta = a[i, :] * np.pi
-        p[i, :, :] = euler_to_rotmat(theta)
+    a = np.reshape(a, newshape=(-1, 3))  # (384, 3)
+    p = np.zeros(shape=(a.shape[0], 3, 3), dtype=np.float32)  # (384, 3, 3)
 
-    p = np.reshape(p, newshape=(-1, 135))
+    for i in range(s[0]):
+        theta = a[i, :] * np.pi  # (3, )
+        # r = euler_to_rotmat(theta)
+        r, _ = cv2.Rodrigues(theta)
+        p[i, :, :] = r
+
+    p = get_closest_rotmat(p)
+    p = np.reshape(p, newshape=(s[0], s[1], 135))
     return p
-
-
-
 
 

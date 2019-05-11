@@ -383,7 +383,8 @@ def train():
             try:
                 while True:
                     # get the predictions and ground truth values
-                    predictions, targets, seed_sequence, data_id = _eval_model.sampled_step(sess)
+                    predictions, targets, seed_sequence, data_id = _eval_model.sampled_step(sess)  # (16, 24, 135)
+
                     _metrics_engine.compute_and_aggregate(predictions, targets)
 
                     if _return_results:
@@ -426,6 +427,7 @@ def train():
                     if epoch >= ARGS.num_epochs:
                         stop_signal = True
                         break
+
                 # COMMENT when running on Leonhard
                 # stop_signal = True
                 # break
