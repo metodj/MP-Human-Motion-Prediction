@@ -160,7 +160,7 @@ class TFRecordMotionDataset(Dataset):
         # Speedup.
         self.tf_data = self.tf_data.prefetch(2)
         # UNCOMMENT when running on Leonhard
-        # self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
+        self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
 
     def _pp_filter(self, sample):
         """Filter out samples that are smaller then the required window size."""
