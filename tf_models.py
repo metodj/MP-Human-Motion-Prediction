@@ -74,6 +74,8 @@ class BaseModel(object):
             self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
             self.input_size = self.HUMAN_SIZE
 
+        print("input_size", self.input_size)
+
     def build_graph(self):
         """Build this model, i.e. its computational graph."""
         self.build_network()
@@ -133,8 +135,6 @@ class BaseModel(object):
 
             self.outputs = self.decoder_output_dense(self.prediction_representation)
 
-            # self.outputs = tf.layers.dense(self.prediction_representation, self.input_size,
-            #                                self.activation_fn_out, reuse=self.reuse)
             print("outputs\t", self.outputs.get_shape())
 
     def summary_routines(self):

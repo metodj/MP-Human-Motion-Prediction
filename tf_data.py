@@ -33,12 +33,12 @@ class Dataset(object):
         self.meta_data = self.load_meta_data(meta_data_path)
 
         # A scalar mean and standard deviation computed over the entire training set
-        self.mean_all = self.meta_data['mean_all']
-        self.var_all = self.meta_data['var_all']
+        self.mean_all = self.meta_data['mean_all']  # (1, 1)
+        self.var_all = self.meta_data['var_all']  # (1, 1)
 
         # A scalar mean and standard deviation per degree of freedom computed over the entire training set
-        self.mean_channel = self.meta_data['mean_channel']
-        self.var_channel = self.meta_data['var_channel']
+        self.mean_channel = self.meta_data['mean_channel']  # (135, )
+        self.var_channel = self.meta_data['var_channel']  # (135, )
 
         # Do some preprocessing.
         self.tf_data_transformations()
@@ -185,7 +185,11 @@ class TFRecordMotionDataset(Dataset):
         """Set the shape of the poses explicitly."""
         # This is required as otherwise the last dimension of the batch is unknown, which is a problem for the model.
         seq_len = sample["poses"].get_shape().as_list()[0]
-        sample["poses"].set_shape([seq_len, self.mean_channel.shape[0]])
+
+        if not self.to_angles:
+            sample["poses"].set_shape([seq_len, self.mean_channel.shape[0]])
+        else:
+            sample["poses"].set_shape([seq_len, 45])
         return sample
 
     @staticmethod
@@ -252,7 +256,8 @@ class TFRecordMotionDataset(Dataset):
         processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
 
         # Set the shape on the output of `py_func` again explicitly, otherwise some functions might complain later on.
-        processed.set_shape([None, 135])
+        # processed.set_shape([None, 135])
+        processed.set_shape([None, 45])
 
         # Update the sample dict and return it.
         model_sample = tf_sample_dict

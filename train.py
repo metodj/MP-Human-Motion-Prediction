@@ -221,6 +221,7 @@ def get_dummy_config(args):
     config['residuals'] = args.residuals
     config['optimizer'] = args.optimizer
     config["loss"] = args.loss
+    config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
 
     model_cls = models.DummyModel
@@ -409,6 +410,8 @@ def train():
                     train_loss += step_loss
 
                     time_counter += (time.perf_counter() - start_time)
+                    print("i:", step, "\tloss =", step_loss)
+
                     if step % ARGS.print_every == 0:
                         train_loss_avg = train_loss / ARGS.print_every
                         time_elapsed = time_counter / ARGS.print_every

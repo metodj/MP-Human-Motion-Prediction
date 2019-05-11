@@ -157,7 +157,7 @@ def euler_to_rotmat(theta):
 
 def rotmats_to_eulers(p):
     p = np.reshape(p, newshape=(-1, 3, 3))
-    a = np.zeros(shape=(p.shape[0], 3))
+    a = np.zeros(shape=(p.shape[0], 3), dtype=np.float32)
 
     for i in range(p.shape[0]):
         r = p[i, :, :]
@@ -170,7 +170,7 @@ def rotmats_to_eulers(p):
 
 def eulers_to_rotmats(a):
     a = np.reshape(a, newshape=(-1, 3))
-    p = np.zeros(shape=(a.shape[0], 9))
+    p = np.zeros(shape=(a.shape[0], 9), dtype=np.float32)
 
     for i in range(a.shape[0]):
         theta = a[i, :] * np.pi
