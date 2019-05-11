@@ -24,6 +24,9 @@ from tf_data import TFRecordMotionDataset
 from constants import Constants as C
 from motion_metrics import MetricsEngine
 
+tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
+
 parser = argparse.ArgumentParser()
 
 # Data
