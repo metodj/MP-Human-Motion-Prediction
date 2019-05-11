@@ -39,6 +39,8 @@ class Dataset(object):
         self.mean_channel = self.meta_data['mean_channel']
         self.var_channel = self.meta_data['var_channel']
 
+
+
         # Do some preprocessing.
         self.tf_data_transformations()
         self.tf_data_to_model()
@@ -123,8 +125,8 @@ class TFRecordMotionDataset(Dataset):
 
         # If you want to do some pre-processing on the entire input sequence (i.e. before we extract windows),
         # here would be a good idea (disabled for now)
-        # self.tf_data = self.tf_data.map(functools.partial(self._my_own_preprocessing),
-        #                                 num_parallel_calls=self.num_parallel_calls)
+        self.tf_data = self.tf_data.map(functools.partial(self._my_own_preprocessing, mean=self.mean_channel,
+                                                var=self.var_channel), num_parallel_calls=self.num_parallel_calls)
 
         # Maybe extract windows
         if self.extract_windows_of > 0:
@@ -157,7 +159,7 @@ class TFRecordMotionDataset(Dataset):
         # Speedup.
         self.tf_data = self.tf_data.prefetch(2)
         # UNCOMMENT when running on Leonhard
-        self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
+        # self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
 
     def _pp_filter(self, sample):
         """Filter out samples that are smaller then the required window size."""
@@ -224,7 +226,7 @@ class TFRecordMotionDataset(Dataset):
         return model_sample
 
     @staticmethod
-    def _my_own_preprocessing(tf_sample_dict):
+    def _my_own_preprocessing(tf_sample_dict, mean, var):
         """
         Placeholder for custom pre-processing.
         Args:
@@ -234,9 +236,13 @@ class TFRecordMotionDataset(Dataset):
             The same dictionary, but pre-processed.
         """
         def _my_np_func(p):
-            # do something great in numpy
-            great = p - 0.0
-            return great
+            mean_ = mean[:, np.newaxis]
+            mean_ = np.repeat(mean_, p.shape[0], axis=1).transpose()
+            var_ = var[:, np.newaxis]
+            var_ = np.repeat(var_, p.shape[0], axis=1).transpose()
+            p = (p-mean_) / var_
+            p = p.astype(np.float32)
+            return p
 
         # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can
         # be used inside TensorFlow. This means, you can program something in numpy and then use it as a node
@@ -251,3 +257,4 @@ class TFRecordMotionDataset(Dataset):
         model_sample["poses"] = processed
         model_sample["shape"] = tf.shape(processed)
         return model_sample
+
