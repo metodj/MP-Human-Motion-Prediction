@@ -14,6 +14,7 @@ import numpy as np
 import os
 import functools
 
+from utils import rotmat_to_euler
 from constants import Constants as C
 
 
@@ -93,6 +94,8 @@ class TFRecordMotionDataset(Dataset):
         # Number of parallel threads accessing the data.
         self.num_parallel_calls = kwargs.get("num_parallel_calls", 16)
 
+        self.to_angles = kwargs.get("to_angles", False)
+
         super(TFRecordMotionDataset, self).__init__(data_path, meta_data_path, batch_size, shuffle, **kwargs)
 
     def tf_data_transformations(self):
@@ -121,10 +124,10 @@ class TFRecordMotionDataset(Dataset):
         if self.shuffle:
             self.tf_data = self.tf_data.shuffle(self.batch_size*10)
 
-        # If you want to do some pre-processing on the entire input sequence (i.e. before we extract windows),
-        # here would be a good idea (disabled for now)
-        # self.tf_data = self.tf_data.map(functools.partial(self._my_own_preprocessing),
-        #                                 num_parallel_calls=self.num_parallel_calls)
+        # Preprocessing to euler angles
+        if self.to_angles:
+            self.tf_data = self.tf_data.map(functools.partial(self._my_own_preprocessing),
+                                            num_parallel_calls=self.num_parallel_calls)
 
         # Maybe extract windows
         if self.extract_windows_of > 0:
@@ -234,9 +237,21 @@ class TFRecordMotionDataset(Dataset):
             The same dictionary, but pre-processed.
         """
         def _my_np_func(p):
-            # do something great in numpy
-            great = p - 0.0
-            return great
+            """
+            Args: r # (num_poses, 135)
+            """
+            p = np.reshape(p, newshape=(-1, 15, 3, 3))
+            p = np.reshape(p, newshape=(-1, 3, 3))
+
+            a = np.zeros(shape=(p.shape[0], 3))
+
+            for i in range(p.shape[0]):
+                r = p[i, :, :]
+                theta = rotmat_to_euler(r)
+                a[i, :] = theta
+
+            a = np.reshape(a, newshape=(-1, 15*3*3))
+            return a
 
         # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can
         # be used inside TensorFlow. This means, you can program something in numpy and then use it as a node

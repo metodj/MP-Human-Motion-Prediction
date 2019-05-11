@@ -15,6 +15,7 @@ import tensorflow as tf
 from constants import Constants as C
 from utils import get_activation_fn
 from utils import geodesic_distance
+from motion_metrics import get_closest_rotmat
 
 
 class BaseModel(object):
@@ -31,6 +32,7 @@ class BaseModel(object):
         self.target_seq_len = config["target_seq_len"]  # Length of the predictions to be made.
         self.batch_size = config["batch_size"]  # Batch size.
         self.activation_fn_out = get_activation_fn(config["activation_fn"])  # Output activation function.
+        self.activation_fn_in = get_activation_fn(config["activation_input"])  # Input activation function.
         self.data_inputs = data_pl[C.BATCH_INPUT]  # Tensor of shape (batch_size, seed length + target length)
         self.data_targets = data_pl[C.BATCH_TARGET]  # Tensor of shape (batch_size, seed length + target length)
         self.data_seq_len = data_pl[C.BATCH_SEQ_LEN]  # Tensor of shape (batch_size, )
@@ -533,6 +535,8 @@ class Seq2seq(BaseModel):
     def __init__(self, config, data_pl, mode, reuse, **kwargs):
         super(Seq2seq, self).__init__(config, data_pl, mode, reuse, **kwargs)
 
+        print(self.config)
+
         # Extract some config parameters specific to this model
         self.cell_type = self.config["cell_type"]
         self.cell_size = self.config["cell_size"]
@@ -553,6 +557,7 @@ class Seq2seq(BaseModel):
         self.rnn_state_decoder = None
         self.inputs_hidden_encoder = None # The inputs to the encoder
         self.inputs_hidden = None  # The inputs to the decoder
+
         self.decoder_linear_output = None  # output linear dense layer; needed in case of sampling loss
         self.output_decoder_sampl_loss = None  # for more efficient predicting in case sampling loss
 
@@ -613,18 +618,15 @@ class Seq2seq(BaseModel):
         """
         # We could e.g. pass them through a dense layer
         if self.input_hidden_size is not None:
-
             with tf.variable_scope("input_layer", reuse=self.reuse):
                 self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                     activation=None, reuse=self.reuse)
+                                                     activation=self.activation_fn_in, reuse=self.reuse)
             with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
                 self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                             activation=None, reuse=self.reuse)
+                                                             activation=self.activation_fn_in, reuse=self.reuse)
         else:
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
-
-        # print("inputs_hidden:\t", self.inputs_hidden.get_shape())
 
     def build_cell(self):
         """Create recurrent cell."""
@@ -651,7 +653,8 @@ class Seq2seq(BaseModel):
         """Fidelity linear input layer."""
         if self.input_hidden_size is not None:
             with tf.variable_scope("input_fidelity", reuse=self.reuse):
-                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                       activation=self.activation_fn_in)
 
                 self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
                 self.inputs_hidden_fid_pred = self.fidelity_linear(
@@ -683,10 +686,12 @@ class Seq2seq(BaseModel):
         """continuity linear input layer."""
         if self.input_hidden_size is not None:
             with tf.variable_scope("input_continuity", reuse=self.reuse):
-                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                         activation=self.activation_fn_in)
 
                 self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
-                self.inputs_hidden_con_pred = self.continuity_linear(tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
+                self.inputs_hidden_con_pred = self.continuity_linear(
+                    tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
         else:
             self.inputs_hidden_con_tar = self.data_inputs
             self.inputs_hidden_con_pred = tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1)
@@ -830,8 +835,7 @@ class Seq2seq(BaseModel):
             self.build_loss_continuity()
 
     def residuals_decoder(self):
-        if not self.sampling_loss:
-            self.outputs = tf.add(self.outputs, self.prediction_inputs)
+        self.outputs = tf.add(self.outputs, self.prediction_inputs)
 
     def build_loss(self):
         super(Seq2seq, self).build_loss()
@@ -923,6 +927,14 @@ class Seq2seq(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
+
+        # Guarantee valid rotation matrices
+        batch_size = predictions.shape[0]
+        seq_length = predictions.shape[1]
+        pred_val = np.reshape(predictions, [-1, self.NUM_JOINTS, 3, 3])  # (64, 24, 135)
+        predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
+        predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
+
         return predictions, seed, data_id
 
     def sample(self, session, seed_sequence, prediction_steps):
