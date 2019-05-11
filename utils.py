@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 import zipfile
+import cv2
+from motion_metrics import get_closest_rotmat
 from constants import Constants as C
 
 
@@ -33,6 +35,10 @@ def get_activation_fn(activation=C.RELU):
         return None
     elif activation == C.RELU:
         return tf.nn.relu
+    elif activation == C.TANH:
+        return tf.nn.tanh
+    elif activation == C.SIGMOID:
+        return tf.nn.sigmoid
     else:
         raise Exception("Activation function is not implemented.")
 
@@ -105,3 +111,80 @@ def geodesic_distance(x1, x2):
     a_norm = tf.clip_by_value(a_norm, -1.0, 1.0)  # Account for numerical errors
 
     return tf.reduce_mean(tf.abs(tf.asin(a_norm)))
+
+
+def is_rotmat(r):
+    rt = np.transpose(r)
+    n = np.linalg.norm(np.eye(3, dtype=r.dtype) - np.dot(rt, r))
+    return n < 1e-6
+
+
+def rotmat_to_euler(r):
+    assert (is_rotmat(r))
+
+    sy = np.sqrt(r[0, 0] * r[0, 0] + r[1, 0] * r[1, 0])
+    singular = sy < 1e-6
+
+    if not singular:
+        x = np.arctan2(r[2, 1], r[2, 2])
+        y = np.arctan2(-r[2, 0], sy)
+        z = np.arctan2(r[1, 0], r[0, 0])
+    else:
+        x = np.arctan2(-r[1, 2], r[1, 1])
+        y = np.arctan2(-r[2, 0], sy)
+        z = 0
+
+    return np.array([x, y, z])
+
+
+def euler_to_rotmat(theta):
+    r_x = np.array([[1, 0, 0],
+                    [0, np.cos(theta[0]), -np.sin(theta[0])],
+                    [0, np.sin(theta[0]), np.cos(theta[0])]
+                    ])
+
+    r_y = np.array([[np.cos(theta[1]), 0, np.sin(theta[1])],
+                    [0, 1, 0],
+                    [-np.sin(theta[1]), 0, np.cos(theta[1])]
+                    ])
+
+    r_z = np.array([[np.cos(theta[2]), -np.sin(theta[2]), 0],
+                    [np.sin(theta[2]), np.cos(theta[2]), 0],
+                    [0, 0, 1]
+                    ])
+
+    r = np.dot(r_z, np.dot(r_y, r_x))
+    return r
+
+
+def rotmats_to_eulers(p):
+    p = np.reshape(p, newshape=(-1, 3, 3))
+    a = np.zeros(shape=(p.shape[0], 3), dtype=np.float32)
+
+    for i in range(p.shape[0]):
+        r = p[i, :, :]
+        # theta = rotmat_to_euler(r)
+        theta, _ = cv2.Rodrigues(r)
+        a[i, :] = np.reshape(theta, newshape=(3,))/np.pi
+
+    a = np.reshape(a, newshape=(-1, 15 * 3))
+    return a
+
+
+def eulers_to_rotmats(a):
+    s = a.shape  # (16, 24, 45)
+
+    a = np.reshape(a, newshape=(-1, 3))  # (384, 3)
+    p = np.zeros(shape=(a.shape[0], 3, 3), dtype=np.float32)  # (384, 3, 3)
+
+    for i in range(s[0]):
+        theta = a[i, :] * np.pi  # (3, )
+        # r = euler_to_rotmat(theta)
+        r, _ = cv2.Rodrigues(theta)
+        p[i, :, :] = r
+
+    p = get_closest_rotmat(p)
+    p = np.reshape(p, newshape=(s[0], s[1], 135))
+    return p
+
+

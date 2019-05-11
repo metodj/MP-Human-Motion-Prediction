@@ -32,6 +32,8 @@ class Constants(object):
 
     # Activation functions.
     RELU = 'relu'
+    TANH = "tanh"
+    SIGMOID = "sigmoid"
 
     # Metrics.
     METRIC_TARGET_LENGTHS = [5, 10, 19, 24, 34, 60]  # @ 60 fps, in ms: 83.3, 166.7, 316.7, 400, 566.7, 1000

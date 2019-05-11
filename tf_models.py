@@ -15,6 +15,8 @@ import tensorflow as tf
 from constants import Constants as C
 from utils import get_activation_fn
 from utils import geodesic_distance
+from motion_metrics import get_closest_rotmat
+from utils import eulers_to_rotmats
 
 
 class BaseModel(object):
@@ -31,6 +33,7 @@ class BaseModel(object):
         self.target_seq_len = config["target_seq_len"]  # Length of the predictions to be made.
         self.batch_size = config["batch_size"]  # Batch size.
         self.activation_fn_out = get_activation_fn(config["activation_fn"])  # Output activation function.
+        self.activation_fn_in = get_activation_fn(config["activation_input"])  # Input activation function.
         self.data_inputs = data_pl[C.BATCH_INPUT]  # Tensor of shape (batch_size, seed length + target length)
         self.data_targets = data_pl[C.BATCH_TARGET]  # Tensor of shape (batch_size, seed length + target length)
         self.data_seq_len = data_pl[C.BATCH_SEQ_LEN]  # Tensor of shape (batch_size, )
@@ -43,6 +46,10 @@ class BaseModel(object):
         self.loss = self.config["loss"]
         self.max_gradient_norm = 5.0
 
+        # dense layers
+        self.decoder_input_dense = None
+        self.decoder_output_dense = None
+
         # The following members should be set by the child class.
         self.outputs = None  # The final predictions.
         self.prediction_targets = None  # The targets.
@@ -54,10 +61,20 @@ class BaseModel(object):
         self.summary_update = None  # Summary op.
 
         # Hard-coded parameters that define the input size.
-        self.JOINT_SIZE = 3*3
-        self.NUM_JOINTS = 15
-        self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
-        self.input_size = self.HUMAN_SIZE
+        # Feature representation
+        self.to_angles = self.config["to_angles"]
+        if not self.to_angles:
+            self.JOINT_SIZE = 3*3
+            self.NUM_JOINTS = 15
+            self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
+            self.input_size = self.HUMAN_SIZE
+        else:
+            self.JOINT_SIZE = 3
+            self.NUM_JOINTS = 15
+            self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
+            self.input_size = self.HUMAN_SIZE
+
+        print("input_size", self.input_size)
 
     def build_graph(self):
         """Build this model, i.e. its computational graph."""
@@ -79,11 +96,15 @@ class BaseModel(object):
             targets_pose = self.prediction_targets
 
         with tf.name_scope("loss"):
-            if self.loss == "geo":
-                # Geodesic loss
-                self.loss = geodesic_distance(targets_pose, predictions_pose)
+            if not self.to_angles:
+                if self.loss == "geo":
+                    # Geodesic loss
+                    self.loss = geodesic_distance(targets_pose, predictions_pose)
+                else:
+                    # MSE
+                    diff = targets_pose - predictions_pose
+                    self.loss = tf.reduce_mean(tf.square(diff))
             else:
-                # MSE
                 diff = targets_pose - predictions_pose
                 self.loss = tf.reduce_mean(tf.square(diff))
 
@@ -109,8 +130,12 @@ class BaseModel(object):
     def build_output_layer(self):
         """Build the final dense output layer without any activation."""
         with tf.variable_scope("output_layer", reuse=self.reuse):
+            # self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
+            #                                             activation=self.activation_fn_out)
+            #
+            # self.outputs = self.decoder_output_dense(self.prediction_representation)
             self.outputs = tf.layers.dense(self.prediction_representation, self.input_size,
-                                           self.activation_fn_out, reuse=self.reuse)
+                                           use_bias=True, activation=self.activation_fn_out, reuse=self.reuse)
 
             print("outputs\t", self.outputs.get_shape())
 
@@ -270,6 +295,7 @@ class DummyModel(BaseModel):
 
             if outputs[15] < 3:
                 print("\n")
+                print("loss", outputs[0])
                 print("data_inputs", outputs[4].shape)
                 print("data_targets", outputs[5].shape)
                 print("data_seq_len", outputs[6].shape)
@@ -309,18 +335,19 @@ class DummyModel(BaseModel):
         batch = session.run(self.data_placeholders)
         data_id = batch[C.BATCH_ID]
         data_sample = batch[C.BATCH_INPUT]
-        targets = data_sample[:, self.source_seq_len:]
+        targets = data_sample[:, self.source_seq_len:]  # train (16, 24, 45/135) / test (16, 0, 45/135)
 
         seed_sequence = data_sample[:, :self.source_seq_len]
 
-        predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
+        predictions = self.sample(session,
+                                  seed_sequence,
+                                  prediction_steps=self.target_seq_len)  # train/test (16, 24, 45/135)
 
-        print("\nsampled step")
-        print("data_id", data_id.shape)
-        print("data_sample", data_sample.shape)
-        print("targets", targets.shape)
-        print("seed_sequence", seed_sequence.shape)
-        print("predictions", predictions.shape)
+        if self.to_angles:
+            if targets.shape[1] != 0:
+                targets = eulers_to_rotmats(targets)  # train (16, 24, 135) / test (16, 24, 135)
+
+            predictions = eulers_to_rotmats(predictions)  # (16, 24, 135)
 
         return predictions, targets, seed_sequence, data_id
 
@@ -336,6 +363,7 @@ class DummyModel(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
+
         return predictions, seed, data_id
 
     def sample(self, session, seed_sequence, prediction_steps):
@@ -356,12 +384,6 @@ class DummyModel(BaseModel):
         feed_dict = {self.prediction_inputs: seed_sequence,
                      self.prediction_seq_len: seed_seq_len}
         state, prediction = session.run([self.rnn_state, self.outputs], feed_dict=feed_dict)
-
-        print("\n\tsample")
-        print("\tone_step_seq_len", one_step_seq_len.shape)
-        print("\tseed_seq_len", seed_sequence.shape)
-        print("\tstate", len(state), state[0].shape, state[1].shape)
-        print("\tprediction", prediction.shape)
 
         # Now create predictions step-by-step.
         prediction = prediction[:, -1:]  # Last prediction from seed sequence
@@ -485,10 +507,18 @@ class ZeroVelocityModel(BaseModel):
         batch = session.run(self.data_placeholders)
         data_id = batch[C.BATCH_ID]
         data_sample = batch[C.BATCH_INPUT]
-        targets = data_sample[:, self.source_seq_len:]
+        targets = data_sample[:, self.source_seq_len:]  # train (16, 24, 45/135) / test (16, 0, 45/135)
 
         seed_sequence = data_sample[:, :self.source_seq_len]
-        predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
+        predictions = self.sample(session,
+                                  seed_sequence,
+                                  prediction_steps=self.target_seq_len)  # train/test (16, 24, 45/135)
+
+        if self.to_angles:
+            if targets.shape[1] != 0:
+                targets = eulers_to_rotmats(targets)
+
+            predictions = eulers_to_rotmats(predictions)
 
         return predictions, targets, seed_sequence, data_id
 
@@ -504,6 +534,7 @@ class ZeroVelocityModel(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
+
         return predictions, seed, data_id
 
     def sample(self, session, seed_sequence, prediction_steps):
@@ -533,6 +564,8 @@ class Seq2seq(BaseModel):
     def __init__(self, config, data_pl, mode, reuse, **kwargs):
         super(Seq2seq, self).__init__(config, data_pl, mode, reuse, **kwargs)
 
+        print(self.config)
+
         # Extract some config parameters specific to this model
         self.cell_type = self.config["cell_type"]
         self.cell_size = self.config["cell_size"]
@@ -553,6 +586,7 @@ class Seq2seq(BaseModel):
         self.rnn_state_decoder = None
         self.inputs_hidden_encoder = None # The inputs to the encoder
         self.inputs_hidden = None  # The inputs to the decoder
+
         self.decoder_linear_output = None  # output linear dense layer; needed in case of sampling loss
         self.output_decoder_sampl_loss = None  # for more efficient predicting in case sampling loss
 
@@ -591,7 +625,7 @@ class Seq2seq(BaseModel):
         if not self.sampling_loss:
             self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1:-1, :]  # 119:143 -> 24 frames (without last)
         else:
-            self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1, :]  # (16, 1, 135) (last seed frame)
+            self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1, :]  # (16, 135) (last seed frame)
 
         self.prediction_targets = self.data_inputs[:, self.source_seq_len:, :]  # 120:144 -> 24 frames (last)
 
@@ -613,18 +647,17 @@ class Seq2seq(BaseModel):
         """
         # We could e.g. pass them through a dense layer
         if self.input_hidden_size is not None:
+            if not self.sampling_loss:
+                with tf.variable_scope("input_layer", reuse=self.reuse):
+                    self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
+                                                         activation=self.activation_fn_in, reuse=self.reuse)
 
-            with tf.variable_scope("input_layer", reuse=self.reuse):
-                self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                     activation=None, reuse=self.reuse)
             with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
                 self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                             activation=None, reuse=self.reuse)
+                                                             activation=self.activation_fn_in, reuse=self.reuse)
         else:
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
-
-        # print("inputs_hidden:\t", self.inputs_hidden.get_shape())
 
     def build_cell(self):
         """Create recurrent cell."""
@@ -651,7 +684,8 @@ class Seq2seq(BaseModel):
         """Fidelity linear input layer."""
         if self.input_hidden_size is not None:
             with tf.variable_scope("input_fidelity", reuse=self.reuse):
-                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                       activation=self.activation_fn_in)
 
                 self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
                 self.inputs_hidden_fid_pred = self.fidelity_linear(
@@ -683,10 +717,12 @@ class Seq2seq(BaseModel):
         """continuity linear input layer."""
         if self.input_hidden_size is not None:
             with tf.variable_scope("input_continuity", reuse=self.reuse):
-                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True, activation=None)
+                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                         activation=self.activation_fn_in)
 
                 self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
-                self.inputs_hidden_con_pred = self.continuity_linear(tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
+                self.inputs_hidden_con_pred = self.continuity_linear(
+                    tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
         else:
             self.inputs_hidden_con_tar = self.data_inputs
             self.inputs_hidden_con_pred = tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1)
@@ -769,25 +805,31 @@ class Seq2seq(BaseModel):
                     self.residuals_decoder()
 
             else:
-                with tf.variable_scope("linear_decoder_sampl_loss_", reuse=self.reuse):
-                    self.decoder_linear_output = tf.layers.Dense(self.input_size, use_bias=True, activation=None)
+                self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
+                                                            activation=self.activation_fn_out, name="input_layer")
 
-                state = self.initial_states_decoder  # Tuple((16, cell_size), (16, cell_size)) encoder hidden state
+                self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                           activation=self.activation_fn_in, name="output_layer")
 
+                state = self.initial_states_decoder
                 seed = self.prediction_inputs
-                self.rnn_outputs = []  # feed the 120th frame, seed
+
+                self.rnn_outputs = []
                 for t in range(self.sequence_length):
-                    seed_, state = self.cell_decoder(inputs=seed,
-                                                     state=state)
-                    seed_ = self.decoder_linear_output(seed_)
+                    tmp = self.decoder_input_dense(seed)
+
+                    # RNN step
+                    seed_, state = self.cell_decoder(inputs=tmp, state=state)
+                    seed_ = self.decoder_output_dense(seed_)
+
                     if self.residuals:
-                        seed_ = tf.add(seed_, seed)  # down-project and add residual
-                    self.output_decoder_sampl_loss = seed_
+                        seed_ = tf.add(seed_, seed)
+
                     self.rnn_outputs.append(seed_)
                     seed = seed_
 
                 self.rnn_state_decoder = state
-                self.rnn_outputs = tf.transpose(tf.stack(self.rnn_outputs), perm=[1, 0, 2])
+                self.rnn_outputs = tf.stack(self.rnn_outputs, axis=1)
 
                 self.outputs = self.rnn_outputs
 
@@ -830,8 +872,7 @@ class Seq2seq(BaseModel):
             self.build_loss_continuity()
 
     def residuals_decoder(self):
-        if not self.sampling_loss:
-            self.outputs = tf.add(self.outputs, self.prediction_inputs)
+        self.outputs = tf.add(self.outputs, self.prediction_inputs)
 
     def build_loss(self):
         super(Seq2seq, self).build_loss()
@@ -857,9 +898,6 @@ class Seq2seq(BaseModel):
                 # print("loss", outputs[0])
                 return outputs[0], outputs[1], outputs[2]
             else:
-                # Update discriminator parameters
-                # _ = session.run(self.parameter_update_disc)
-
                 # Update all
                 output_feed = [self.loss,
                                self.summary_update,
@@ -872,11 +910,11 @@ class Seq2seq(BaseModel):
                                ]
                 outputs = session.run(output_feed)
 
-                # if outputs[7] % 20:
-                #     print("loss", outputs[0])
-                #     print("loss_fidelity", outputs[5])
-                #     print("loss_continuity", outputs[6])
-                #     print("loss_predictor", outputs[0] - self.lambda_*(outputs[6] + outputs[5]))
+                if outputs[7] % 20:
+                    print("loss", outputs[0])
+                    print("loss_fidelity", outputs[5])
+                    print("loss_continuity", outputs[6])
+                    print("loss_predictor", outputs[0] - self.lambda_*(outputs[6] + outputs[5]))
 
                 return outputs[0], outputs[1], outputs[2]
 
@@ -909,6 +947,18 @@ class Seq2seq(BaseModel):
         seed_sequence = data_sample[:, :self.source_seq_len]  # 0:120 -> 120 (seed)
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
+        if self.to_angles:
+            if targets.shape[1] != 0:
+                targets = eulers_to_rotmats(targets)  # train (16, 24, 135) / test (16, 24, 135)
+
+            predictions = eulers_to_rotmats(predictions)  # (16, 24, 135)
+        else:
+            batch_size = predictions.shape[0]
+            seq_length = predictions.shape[1]
+            pred_val = np.reshape(predictions, [-1, self.NUM_JOINTS, 3, 3])  # (64, 24, 135)
+            predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
+            predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
+
         return predictions, targets, seed_sequence, data_id
 
     def predict(self, session):
@@ -923,6 +973,7 @@ class Seq2seq(BaseModel):
         """
         # `sampled_step` is written such that it works when no ground-truth data is available, too.
         predictions, _, seed, data_id = self.sampled_step(session)
+
         return predictions, seed, data_id
 
     def sample(self, session, seed_sequence, prediction_steps):
@@ -939,8 +990,8 @@ class Seq2seq(BaseModel):
         assert self.is_eval, "Only works in sampling mode."
         one_step_seq_len = np.ones(seed_sequence.shape[0])
 
-        seed_sequence_encoder = seed_sequence[:, :-1, :]  # (16, 119, 135)
-        seed_decoder = seed_sequence[:, -1, :]  # (16, 135)
+        seed_sequence_encoder = seed_sequence[:, :-1, :]  # (16, 119, 135/45)
+        seed_decoder = seed_sequence[:, -1, :]  # (16, 135/45)
 
         # Feed the seed sequence to warm up the RNN.
         feed_dict = {self.inputs_encoder: seed_sequence_encoder,  # 119 frames
@@ -962,18 +1013,18 @@ class Seq2seq(BaseModel):
 
                 predictions.append(prediction)
 
-            # predictions.pop(0)  # remove first element, then repair range()
-            # predictions = np.concatenate(predictions, axis=1)
-            predictions = np.stack(predictions, axis=1).reshape((seed_decoder.shape[0], self.sequence_length, self.input_size))
+            predictions = np.stack(predictions, axis=1).reshape((seed_decoder.shape[0],
+                                                                 self.sequence_length, self.input_size))
 
         else:
-            prediction = seed_decoder
-            predictions = np.zeros(shape=(seed_decoder.shape[0], prediction_steps, self.input_size))  # (16, 24, 135)
+            prediction = seed_decoder  # (16, 135/45)
+            predictions = np.zeros(shape=(seed_decoder.shape[0], prediction_steps, self.input_size))  # (16, 24, 135/45)
 
             for step in range(prediction_steps):
                     feed_dict = {self.prediction_inputs: prediction,
                                  self.initial_states_decoder: state}
-                    state, prediction = session.run([self.rnn_state_decoder, self.output_decoder_sampl_loss], feed_dict=feed_dict)
+                    state, prediction = session.run([self.rnn_state_decoder, self.rnn_outputs], feed_dict=feed_dict)
+                    prediction = prediction[:, 0, :]
                     predictions[:, step, :] = prediction
 
         return predictions

@@ -16,10 +16,8 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
-# RS
 import sys
 import datetime
-# RS
 
 import tf_models as models
 from tf_data import TFRecordMotionDataset
@@ -28,6 +26,10 @@ from utils import export_results
 from utils import export_code
 from visualize import Visualizer
 from fk import SMPLForwardKinematics
+
+
+tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
 
 
 def create_and_restore_test_model(session, experiment_dir, args):
@@ -62,7 +64,8 @@ def create_and_restore_test_model(session, experiment_dir, args):
                                           shuffle=False,
                                           extract_windows_of=window_length,
                                           extract_random_windows=False,
-                                          num_parallel_calls=16)
+                                          num_parallel_calls=16,
+                                          to_angles=config["to_angles"])
         test_pl = test_data.get_tf_samples()
 
     # Select the type of model we want to use.

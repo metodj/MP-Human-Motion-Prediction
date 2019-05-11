@@ -4,3 +4,7 @@ experiments/
 *.pyc
 .idea/
 __pycache__/
+
+rok/
+venv/
+logs/

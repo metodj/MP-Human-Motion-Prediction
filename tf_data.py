@@ -14,6 +14,7 @@ import numpy as np
 import os
 import functools
 
+from utils import rotmats_to_eulers
 from constants import Constants as C
 
 
@@ -32,12 +33,12 @@ class Dataset(object):
         self.meta_data = self.load_meta_data(meta_data_path)
 
         # A scalar mean and standard deviation computed over the entire training set
-        self.mean_all = self.meta_data['mean_all']
-        self.var_all = self.meta_data['var_all']
+        self.mean_all = self.meta_data['mean_all']  # (1, 1)
+        self.var_all = self.meta_data['var_all']  # (1, 1)
 
         # A scalar mean and standard deviation per degree of freedom computed over the entire training set
-        self.mean_channel = self.meta_data['mean_channel']
-        self.var_channel = self.meta_data['var_channel']
+        self.mean_channel = self.meta_data['mean_channel']  # (135, )
+        self.var_channel = self.meta_data['var_channel']  # (135, )
 
 
 
@@ -95,6 +96,9 @@ class TFRecordMotionDataset(Dataset):
         # Number of parallel threads accessing the data.
         self.num_parallel_calls = kwargs.get("num_parallel_calls", 16)
 
+        self.to_angles = kwargs.get("to_angles", False)
+        self.standardization = kwargs.get("standardization", False)
+
         super(TFRecordMotionDataset, self).__init__(data_path, meta_data_path, batch_size, shuffle, **kwargs)
 
     def tf_data_transformations(self):
@@ -123,10 +127,17 @@ class TFRecordMotionDataset(Dataset):
         if self.shuffle:
             self.tf_data = self.tf_data.shuffle(self.batch_size*10)
 
+
         # If you want to do some pre-processing on the entire input sequence (i.e. before we extract windows),
         # here would be a good idea (disabled for now)
-        self.tf_data = self.tf_data.map(functools.partial(self._my_own_preprocessing, mean=self.mean_channel,
+        if self.standardization:
+            self.tf_data = self.tf_data.map(functools.partial(self._standardization, mean=self.mean_channel,
                                                 var=self.var_channel), num_parallel_calls=self.num_parallel_calls)
+        # Preprocessing to euler angles
+        if self.to_angles:
+            self.tf_data = self.tf_data.map(functools.partial(self._my_own_preprocessing),
+                                            num_parallel_calls=self.num_parallel_calls)
+
 
         # Maybe extract windows
         if self.extract_windows_of > 0:
@@ -184,7 +195,11 @@ class TFRecordMotionDataset(Dataset):
         """Set the shape of the poses explicitly."""
         # This is required as otherwise the last dimension of the batch is unknown, which is a problem for the model.
         seq_len = sample["poses"].get_shape().as_list()[0]
-        sample["poses"].set_shape([seq_len, self.mean_channel.shape[0]])
+
+        if not self.to_angles:
+            sample["poses"].set_shape([seq_len, self.mean_channel.shape[0]])
+        else:
+            sample["poses"].set_shape([seq_len, 45])
         return sample
 
     @staticmethod
@@ -236,7 +251,43 @@ class TFRecordMotionDataset(Dataset):
             The same dictionary, but pre-processed.
         """
         def _my_np_func(p):
+            """
+            Args:
+                p # (num_poses, 15 * 3 * 3)
+            Returns:
+                a # (num_poses, 15 * 3)
+            """
+            a = rotmats_to_eulers(p)
+            return a
+
+        # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can
+        # be used inside TensorFlow. This means, you can program something in numpy and then use it as a node
+        # in the computational graph.
+        processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
+
+        # Set the shape on the output of `py_func` again explicitly, otherwise some functions might complain later on.
+        # processed.set_shape([None, 135])
+        processed.set_shape([None, 45])
+
+        # Update the sample dict and return it.
+        model_sample = tf_sample_dict
+        model_sample["poses"] = processed
+        model_sample["shape"] = tf.shape(processed)
+        return model_sample
+
+    @staticmethod
+    def _standardization(tf_sample_dict, mean, var):
+        """
+        Placeholder for custom pre-processing.
+        Args:
+            tf_sample_dict: The dictionary returned by `_parse_single_tfexample_fn`.
+
+        Returns:
+            The same dictionary, but pre-processed.
+        """
+        def _standardize(p):
             mean_ = mean[:, np.newaxis]
+            print(mean_.shape)
             mean_ = np.repeat(mean_, p.shape[0], axis=1).transpose()
             var_ = var[:, np.newaxis]
             var_ = np.repeat(var_, p.shape[0], axis=1).transpose()
@@ -244,10 +295,11 @@ class TFRecordMotionDataset(Dataset):
             p = p.astype(np.float32)
             return p
 
+
         # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can
         # be used inside TensorFlow. This means, you can program something in numpy and then use it as a node
         # in the computational graph.
-        processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
+        processed = tf.py_func(_standardize, [tf_sample_dict["poses"]], tf.float32)
 
         # Set the shape on the output of `py_func` again explicitly, otherwise some functions might complain later on.
         processed.set_shape([None, 135])
