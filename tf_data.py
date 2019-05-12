@@ -241,7 +241,7 @@ class TFRecordMotionDataset(Dataset):
         return model_sample
 
     @staticmethod
-    def _my_own_preprocessing(tf_sample_dict, mean, var):
+    def _my_own_preprocessing(tf_sample_dict):
         """
         Placeholder for custom pre-processing.
         Args:
@@ -286,12 +286,17 @@ class TFRecordMotionDataset(Dataset):
             The same dictionary, but pre-processed.
         """
         def _standardize(p):
-            mean_ = mean[:, np.newaxis]
-            print(mean_.shape)
-            mean_ = np.repeat(mean_, p.shape[0], axis=1).transpose()
-            var_ = var[:, np.newaxis]
-            var_ = np.repeat(var_, p.shape[0], axis=1).transpose()
-            p = (p-mean_) / var_
+            # mean_ = mean[:, np.newaxis]
+            # print(mean_.shape)
+            # mean_ = np.repeat(mean_, p.shape[0], axis=1).transpose()
+            # var_ = var[:, np.newaxis]
+            # var_ = np.repeat(var_, p.shape[0], axis=1).transpose()
+            # p2 = (p-mean)/var
+            # p = (p-mean_) / var_
+            # print(np.all(p==p2))
+
+            # above can be simplified due to numpy broadcasting
+            p = (p - mean)/var
             p = p.astype(np.float32)
             return p
 

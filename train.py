@@ -141,7 +141,9 @@ def create_model(session):
             data_pl=train_pl,
             mode=C.TRAIN,
             reuse=False,
-            dtype=tf.float32)
+            dtype=tf.float32,
+            means=train_data.mean_channel,
+            vars=train_data.var_channel)
         train_model.build_graph()
 
     # Create a copy of the training model for validation.
@@ -151,7 +153,10 @@ def create_model(session):
             data_pl=valid_pl,
             mode=C.EVAL,
             reuse=True,
-            dtype=tf.float32)
+            dtype=tf.float32,
+            means=train_data.mean_channel,
+            vars=train_data.var_channel
+        )
         valid_model.build_graph()
 
     # Count and print the number of trainable parameters.
@@ -394,6 +399,7 @@ def train():
 
                     _metrics_engine.compute_and_aggregate(predictions, targets)
 
+
                     if _return_results:
                         # Store each test sample and corresponding predictions with the unique sample IDs.
                         for k in range(predictions.shape[0]):
@@ -436,12 +442,14 @@ def train():
                         break
 
                 # COMMENT when running on Leonhard
-                if ARGS.model_type == "zero_velocity":
-                    stop_signal = True
-                    break
-
-            if ARGS.use_cpu:
-                stop_signal = True
+                # stop_signal = True
+                # break
+            #     if ARGS.model_type == "zero_velocity":
+            #         stop_signal = True
+            #         break
+            #
+            # if ARGS.use_cpu:
+            #     stop_signal = True
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)

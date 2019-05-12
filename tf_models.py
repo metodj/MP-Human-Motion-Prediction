@@ -50,6 +50,11 @@ class BaseModel(object):
         self.decoder_input_dense = None
         self.decoder_output_dense = None
 
+        # standardization
+        self.standardization = self.config["standardization"]
+        self.means = kwargs.get("means", None)
+        self.vars = kwargs.get("vars", None)
+
         # The following members should be set by the child class.
         self.outputs = None  # The final predictions.
         self.prediction_targets = None  # The targets.
@@ -95,6 +100,12 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
+        if self.standardization:
+            predictions_pose = tf.add(tf.math.multiply(predictions_pose, self.vars), self.means)
+            targets_pose = tf.add(tf.math.multiply(targets_pose, self.vars), self.means)
+
+        print(predictions_pose.get_shape())
+        print(targets_pose.get_shape())
         with tf.name_scope("loss"):
             if not self.to_angles:
                 if self.loss == "geo":
@@ -576,6 +587,7 @@ class Seq2seq(BaseModel):
         self.continuity = self.config["continuity"]
         self.lambda_ = self.config["lambda_"]
 
+
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
         self.cell_decoder = None # The decoder cell.
@@ -628,6 +640,9 @@ class Seq2seq(BaseModel):
             self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1, :]  # (16, 135) (last seed frame)
 
         self.prediction_targets = self.data_inputs[:, self.source_seq_len:, :]  # 120:144 -> 24 frames (last)
+        
+        # if self.standardization:
+        #     self.prediction_targets = tf.add(tf.math.multiply(self.prediction_targets, self.vars), self.means)
 
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]),
                                           dtype=tf.int32)*self.sequence_length  # [24, ..., 24]
@@ -959,6 +974,9 @@ class Seq2seq(BaseModel):
             predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
             predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
 
+        if self.standardization:
+            predictions = (predictions * self.vars) + self.means
+            targets = (targets * self.vars) + self.means
         return predictions, targets, seed_sequence, data_id
 
     def predict(self, session):
