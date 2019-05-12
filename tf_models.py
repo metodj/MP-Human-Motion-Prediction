@@ -101,11 +101,9 @@ class BaseModel(object):
             targets_pose = self.prediction_targets
 
         if self.standardization:
-            predictions_pose = tf.add(tf.math.multiply(predictions_pose, self.vars), self.means)
-            targets_pose = tf.add(tf.math.multiply(targets_pose, self.vars), self.means)
+            predictions_pose = tf.math.add(tf.math.multiply(predictions_pose, self.vars), self.means)
+            targets_pose = tf.math.add(tf.math.multiply(targets_pose, self.vars), self.means)
 
-        print(predictions_pose.get_shape())
-        print(targets_pose.get_shape())
         with tf.name_scope("loss"):
             if not self.to_angles:
                 if self.loss == "geo":
@@ -642,7 +640,7 @@ class Seq2seq(BaseModel):
         self.prediction_targets = self.data_inputs[:, self.source_seq_len:, :]  # 120:144 -> 24 frames (last)
         
         # if self.standardization:
-        #     self.prediction_targets = tf.add(tf.math.multiply(self.prediction_targets, self.vars), self.means)
+        #     self.prediction_targets = tf.math.add(tf.math.multiply(self.prediction_targets, self.vars), self.means)
 
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]),
                                           dtype=tf.int32)*self.sequence_length  # [24, ..., 24]
