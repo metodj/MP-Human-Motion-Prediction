@@ -185,7 +185,7 @@ def eulers_to_rotmats(a):
     a = np.reshape(a, newshape=(-1, 3))  # (384, 3)
     p = np.zeros(shape=(a.shape[0], 3, 3), dtype=np.float32)  # (384, 3, 3)
 
-    for i in range(s[0]):
+    for i in range(a.shape[0]):
         # TODO: multiply by pi or not?
         # theta = a[i, :] * np.pi  # (3, )
 

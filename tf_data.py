@@ -240,6 +240,7 @@ class TFRecordMotionDataset(Dataset):
         model_sample[C.BATCH_ID] = tf_sample_dict["file_id"]
         return model_sample
 
+
     @staticmethod
     def _my_own_preprocessing(tf_sample_dict):
         """
@@ -257,7 +258,9 @@ class TFRecordMotionDataset(Dataset):
             Returns:
                 a # (num_poses, 15 * 3)
             """
+            # print(p.shape)
             a = rotmats_to_eulers(p)
+            # print(a.shape)
             return a
 
         # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can

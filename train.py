@@ -399,7 +399,6 @@ def train():
 
                     _metrics_engine.compute_and_aggregate(predictions, targets)
 
-
                     if _return_results:
                         # Store each test sample and corresponding predictions with the unique sample IDs.
                         for k in range(predictions.shape[0]):
@@ -448,8 +447,8 @@ def train():
             #         stop_signal = True
             #         break
             #
-            # if ARGS.use_cpu:
-            #     stop_signal = True
+            if ARGS.use_cpu:
+                stop_signal = True
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
