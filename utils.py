@@ -94,7 +94,10 @@ def export_results(eval_result, output_file):
     to_csv(output_file, np.stack(sample_poses), sample_file_ids)
 
 
-def geodesic_distance(x1, x2):
+def geodesic_distance(x1, x2, angle_axis):
+    if angle_axis:
+        x1 = eulers_to_rotmats(x1)
+        x2 = eulers_to_rotmats(x2)
     y1 = tf.reshape(x1, shape=[-1, 3, 3])
     y2 = tf.reshape(x2, shape=[-1, 3, 3])
     y2 = tf.transpose(y2, perm=[0, 2, 1])

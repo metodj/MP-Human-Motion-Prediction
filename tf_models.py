@@ -105,15 +105,22 @@ class BaseModel(object):
             targets_pose = tf.math.add(tf.math.multiply(targets_pose, self.vars), self.means)
 
         with tf.name_scope("loss"):
-            if not self.to_angles:
-                if self.loss == "geo":
-                    # Geodesic loss
-                    self.loss = geodesic_distance(targets_pose, predictions_pose)
-                else:
-                    # MSE
-                    diff = targets_pose - predictions_pose
-                    self.loss = tf.reduce_mean(tf.square(diff))
+            # if not self.to_angles:
+            #     if self.loss == "geo":
+            #         # Geodesic loss
+            #         self.loss = geodesic_distance(targets_pose, predictions_pose)
+            #     else:
+            #         # MSE
+            #         diff = targets_pose - predictions_pose
+            #         self.loss = tf.reduce_mean(tf.square(diff))
+            # else:
+            #     diff = targets_pose - predictions_pose
+            #     self.loss = tf.reduce_mean(tf.square(diff))
+            if self.loss == "geo":
+                # Geodesic loss
+                self.loss = geodesic_distance(targets_pose, predictions_pose, angle_axis=self.to_angles)
             else:
+                # MSE
                 diff = targets_pose - predictions_pose
                 self.loss = tf.reduce_mean(tf.square(diff))
 
@@ -302,22 +309,22 @@ class DummyModel(BaseModel):
                            ]
             outputs = session.run(output_feed)
 
-            if outputs[15] < 3:
-                print("\n")
-                print("loss", outputs[0])
-                print("data_inputs", outputs[4].shape)
-                print("data_targets", outputs[5].shape)
-                print("data_seq_len", outputs[6].shape)
-                print("data_ids", outputs[7].shape)
-                print("prediction_inputs", outputs[8].shape)
-                print("prediction_targets", outputs[9].shape)
-                print("inputs_hidden", outputs[10].shape)
-                print("rnn_state", outputs[11][0].shape, outputs[11][1].shape)
-                print("rnn_outputs", outputs[12].shape)
-                print("prediction_representation", outputs[13].shape)
-                print("outputs", outputs[14].shape)
-                print("predictions_pose", outputs[14][:, -self.target_seq_len:, :].shape)
-                print("targets_pose", outputs[9][:, -self.target_seq_len:, :].shape)
+            # if outputs[15] < 3:
+            #     print("\n")
+            #     print("loss", outputs[0])
+            #     print("data_inputs", outputs[4].shape)
+            #     print("data_targets", outputs[5].shape)
+            #     print("data_seq_len", outputs[6].shape)
+            #     print("data_ids", outputs[7].shape)
+            #     print("prediction_inputs", outputs[8].shape)
+            #     print("prediction_targets", outputs[9].shape)
+            #     print("inputs_hidden", outputs[10].shape)
+            #     print("rnn_state", outputs[11][0].shape, outputs[11][1].shape)
+            #     print("rnn_outputs", outputs[12].shape)
+            #     print("prediction_representation", outputs[13].shape)
+            #     print("outputs", outputs[14].shape)
+            #     print("predictions_pose", outputs[14][:, -self.target_seq_len:, :].shape)
+            #     print("targets_pose", outputs[9][:, -self.target_seq_len:, :].shape)
 
             return outputs[0], outputs[1], outputs[2]
         else:
@@ -357,6 +364,10 @@ class DummyModel(BaseModel):
                 targets = eulers_to_rotmats(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
             predictions = eulers_to_rotmats(predictions)  # (16, 24, 135)
+
+        if self.standardization:
+            predictions = (predictions * self.vars) + self.means
+            targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
@@ -528,6 +539,10 @@ class ZeroVelocityModel(BaseModel):
                 targets = eulers_to_rotmats(targets)
 
             predictions = eulers_to_rotmats(predictions)
+
+        if self.standardization:
+            predictions = (predictions * self.vars) + self.means
+            targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
@@ -975,6 +990,7 @@ class Seq2seq(BaseModel):
         if self.standardization:
             predictions = (predictions * self.vars) + self.means
             targets = (targets * self.vars) + self.means
+
         return predictions, targets, seed_sequence, data_id
 
     def predict(self, session):
