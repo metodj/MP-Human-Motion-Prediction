@@ -194,7 +194,7 @@ def eulers_to_rotmats(a):
         r = rodrigues(a[i, :], rotmat_to_angle=False)
         p[i, :, :] = r
 
-    p = get_closest_rotmat(p)
+    # p = get_closest_rotmat(p)
     p = np.reshape(p, newshape=(s[0], s[1], 135))
     return p
 
