@@ -123,12 +123,16 @@ def rodrigues(input, rotmat_to_angle=True):
     if rotmat_to_angle:
         assert is_rotmat(input)
         angle_axis = np.zeros(shape=(3,))
+
+        if np.all(input == np.eye(3)):
+            return angle_axis
+
         rot = 0.5*(input - input.T)
         angle_axis[0] = rot[2, 1]
         angle_axis[1] = rot[0, 2]
         angle_axis[2] = rot[1, 0]
 
-        norm = np.maximum(np.linalg.norm(angle_axis), 1e-5)
+        norm = np.linalg.norm(angle_axis)
         norm = np.clip(norm, -1, 1)
 
         # TODO: which of the versions below is correct?
