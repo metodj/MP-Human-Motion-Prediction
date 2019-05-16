@@ -121,21 +121,22 @@ def is_rotmat(r):
 
 def rodrigues(input, rotmat_to_angle=True):
     if rotmat_to_angle:
+        assert is_rotmat(input)
         angle_axis = np.zeros(shape=(3,))
-        rot = 0.5*(input - np.transpose(input))
+        rot = 0.5*(input - input.T)
         angle_axis[0] = rot[2, 1]
         angle_axis[1] = rot[0, 2]
         angle_axis[2] = rot[1, 0]
 
-        norm = np.linalg.norm(angle_axis)
-        if norm < 1e-5:
-            print(norm)
+        norm = np.maximum(np.linalg.norm(angle_axis), 1e-5)
+        norm = np.clip(norm, -1, 1)
+
         # TODO: which of the versions below is correct?
         # angle_axis = angle_axis / norm
         angle_axis = (angle_axis*np.arcsin(norm)) / norm
         return angle_axis
     else:
-        rot_ = np.zeros(shape=(3,3))
+        rot_ = np.zeros(shape=(3, 3))
         theta = np.linalg.norm(input)
         angle_vec = input / theta
         rot_[0, 1] = -angle_vec[2]
@@ -153,6 +154,9 @@ def rodrigues(input, rotmat_to_angle=True):
 
 def rotmats_to_eulers(p):
     p = np.reshape(p, newshape=(-1, 3, 3))
+    # a = np.apply_over_axes(rodrigues, p, [1, 2])
+    # a = np.apply_along_axis(rodrigues, 1, p)
+
     a = np.zeros(shape=(p.shape[0], 3), dtype=np.float32)
 
     for i in range(p.shape[0]):
