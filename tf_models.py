@@ -16,7 +16,7 @@ from constants import Constants as C
 from utils import get_activation_fn
 from utils import geodesic_distance
 from motion_metrics import get_closest_rotmat
-from utils import eulers_to_rotmats
+from utils import angle_axis_to_rot_mats
 
 
 class BaseModel(object):
@@ -105,24 +105,24 @@ class BaseModel(object):
             targets_pose = tf.math.add(tf.math.multiply(targets_pose, self.vars), self.means)
 
         with tf.name_scope("loss"):
-            # if not self.to_angles:
-            #     if self.loss == "geo":
-            #         # Geodesic loss
-            #         self.loss = geodesic_distance(targets_pose, predictions_pose)
-            #     else:
-            #         # MSE
-            #         diff = targets_pose - predictions_pose
-            #         self.loss = tf.reduce_mean(tf.square(diff))
-            # else:
-            #     diff = targets_pose - predictions_pose
-            #     self.loss = tf.reduce_mean(tf.square(diff))
-            if self.loss == "geo":
-                # Geodesic loss
-                self.loss = geodesic_distance(targets_pose, predictions_pose, angle_axis=self.to_angles)
+            if not self.to_angles:
+                if self.loss == "geo":
+                    # Geodesic loss
+                    self.loss = geodesic_distance(targets_pose, predictions_pose)
+                else:
+                    # MSE
+                    diff = targets_pose - predictions_pose
+                    self.loss = tf.reduce_mean(tf.square(diff))
             else:
-                # MSE
                 diff = targets_pose - predictions_pose
                 self.loss = tf.reduce_mean(tf.square(diff))
+            # if self.loss == "geo":
+            #     # Geodesic loss
+            #     self.loss = geodesic_distance(targets_pose, predictions_pose, angle_axis=self.to_angles)
+            # else:
+            #     # MSE
+            #     diff = targets_pose - predictions_pose
+            #     self.loss = tf.reduce_mean(tf.square(diff))
 
     def optimization_routines(self):
         """Add an optimizer."""
@@ -361,9 +361,9 @@ class DummyModel(BaseModel):
 
         if self.to_angles:
             if targets.shape[1] != 0:
-                targets = eulers_to_rotmats(targets)  # train (16, 24, 135) / test (16, 24, 135)
+                targets = angle_axis_to_rot_mats(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
-            predictions = eulers_to_rotmats(predictions)  # (16, 24, 135)
+            predictions = angle_axis_to_rot_mats(predictions)  # (16, 24, 135)
 
         if self.standardization:
             predictions = (predictions * self.vars) + self.means
@@ -536,9 +536,9 @@ class ZeroVelocityModel(BaseModel):
 
         if self.to_angles:
             if targets.shape[1] != 0:
-                targets = eulers_to_rotmats(targets)
+                targets = angle_axis_to_rot_mats(targets)
 
-            predictions = eulers_to_rotmats(predictions)
+            predictions = angle_axis_to_rot_mats(predictions)
 
         if self.standardization:
             predictions = (predictions * self.vars) + self.means
@@ -977,9 +977,9 @@ class Seq2seq(BaseModel):
 
         if self.to_angles:
             if targets.shape[1] != 0:
-                targets = eulers_to_rotmats(targets)  # train (16, 24, 135) / test (16, 24, 135)
+                targets = angle_axis_to_rot_mats(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
-            predictions = eulers_to_rotmats(predictions)  # (16, 24, 135)
+            predictions = angle_axis_to_rot_mats(predictions)  # (16, 24, 135)
         else:
             batch_size = predictions.shape[0]
             seq_length = predictions.shape[1]

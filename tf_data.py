@@ -14,7 +14,7 @@ import numpy as np
 import os
 import functools
 
-from utils import rotmats_to_eulers
+from utils import rot_mats_to_angle_axis
 from constants import Constants as C
 
 
@@ -39,8 +39,6 @@ class Dataset(object):
         # A scalar mean and standard deviation per degree of freedom computed over the entire training set
         self.mean_channel = self.meta_data['mean_channel']  # (135, )
         self.var_channel = self.meta_data['var_channel']  # (135, )
-
-
 
         # Do some preprocessing.
         self.tf_data_transformations()
@@ -127,17 +125,16 @@ class TFRecordMotionDataset(Dataset):
         if self.shuffle:
             self.tf_data = self.tf_data.shuffle(self.batch_size*10)
 
-
         # If you want to do some pre-processing on the entire input sequence (i.e. before we extract windows),
         # here would be a good idea (disabled for now)
         if self.standardization:
             self.tf_data = self.tf_data.map(functools.partial(self._standardization, mean=self.mean_channel,
                                                 var=self.var_channel), num_parallel_calls=self.num_parallel_calls)
+
         # Preprocessing to euler angles
         if self.to_angles:
-            self.tf_data = self.tf_data.map(functools.partial(self._my_own_preprocessing),
+            self.tf_data = self.tf_data.map(functools.partial(self._pp_rot_mats_to_angle_axis),
                                             num_parallel_calls=self.num_parallel_calls)
-
 
         # Maybe extract windows
         if self.extract_windows_of > 0:
@@ -242,7 +239,7 @@ class TFRecordMotionDataset(Dataset):
 
 
     @staticmethod
-    def _my_own_preprocessing(tf_sample_dict):
+    def _pp_rot_mats_to_angle_axis(tf_sample_dict):
         """
         Placeholder for custom pre-processing.
         Args:
@@ -251,25 +248,23 @@ class TFRecordMotionDataset(Dataset):
         Returns:
             The same dictionary, but pre-processed.
         """
-        def _my_np_func(p):
+        def _my_np_func(rot_mats_tensor):
             """
             Args:
-                p # (num_poses, 15 * 3 * 3)
+                rot_mats_tensor # (num_poses, 135)
             Returns:
-                a # (num_poses, 15 * 3)
+                angle_axis_tensor # (num_poses, 45)
             """
-            # print(p.shape)
-            a = rotmats_to_eulers(p)
-            # print(a.shape)
-            return a
+            print("rot_mats", rot_mats_tensor.shape)
+            angle_axis_tensor = rot_mats_to_angle_axis(rot_mats_tensor)
+            print("angle_axis", angle_axis_tensor.shape)
 
-        # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can
-        # be used inside TensorFlow. This means, you can program something in numpy and then use it as a node
-        # in the computational graph.
+            return angle_axis_tensor
+
         processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
+        # processed = tf.py_function(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
 
         # Set the shape on the output of `py_func` again explicitly, otherwise some functions might complain later on.
-        # processed.set_shape([None, 135])
         processed.set_shape([None, 45])
 
         # Update the sample dict and return it.
@@ -302,7 +297,6 @@ class TFRecordMotionDataset(Dataset):
             p = (p - mean)/var
             p = p.astype(np.float32)
             return p
-
 
         # A useful function provided by TensorFlow is `tf.py_func`. It wraps python functions so that they can
         # be used inside TensorFlow. This means, you can program something in numpy and then use it as a node
