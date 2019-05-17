@@ -159,22 +159,28 @@ def rodrigues_rok(input):
 
 
 def rot_mats_to_angle_axis(rot_mat_tensor):
-    s = rot_mat_tensor.shape  # (16, 24, 135)
+    s = rot_mat_tensor.shape  # (16, 24, 135) / (384, 135)
 
     rot_mat_tensor = np.reshape(rot_mat_tensor, newshape=(-1, 3, 3))  # (5760, 3, 3)
     angle_axis_tensor = np.stack(list(map(rodrigues_rok, rot_mat_tensor)), axis=0)  # (5760, 3)
 
-    angle_axis_tensor = np.reshape(angle_axis_tensor, newshape=(s[0], s[1], 45))  # (16, 24, 45)
+    if len(s) == 2:
+        angle_axis_tensor = np.reshape(angle_axis_tensor, newshape=(-1, 45))  # (384, 45)
+    elif len(s) == 3:
+        angle_axis_tensor = np.reshape(angle_axis_tensor, newshape=(s[0], s[1], 45))  # (16, 24, 45)
     return angle_axis_tensor
 
 
 def angle_axis_to_rot_mats(angle_axis_tensor):
-    s = angle_axis_tensor.shape  # (16, 24, 45)
+    s = angle_axis_tensor.shape  # (16, 24, 45) / (384, 45)
 
     angle_axis_tensor = np.reshape(angle_axis_tensor, newshape=(-1, 3))  # (5760, 3)
     rot_mat_tensor = np.stack(list(map(rodrigues_rok, angle_axis_tensor)), axis=0)  # (5760, 3, 3)
 
-    rot_mat_tensor = np.reshape(rot_mat_tensor, newshape=(s[0], s[1], 135))  # (16, 24, 135)
+    if len(s) == 2:
+        rot_mat_tensor = np.reshape(rot_mat_tensor, newshape=(-1, 135))  # (384, 135)
+    elif len(s) == 3:
+        rot_mat_tensor = np.reshape(rot_mat_tensor, newshape=(s[0], s[1], 135))  # (16, 24, 135)
     return rot_mat_tensor
 
 

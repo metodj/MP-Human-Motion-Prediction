@@ -46,10 +46,6 @@ class BaseModel(object):
         self.loss = self.config["loss"]
         self.max_gradient_norm = 5.0
 
-        # dense layers
-        self.decoder_input_dense = None
-        self.decoder_output_dense = None
-
         # standardization
         self.standardization = self.config["standardization"]
         self.means = kwargs.get("means", None)
@@ -78,8 +74,6 @@ class BaseModel(object):
             self.NUM_JOINTS = 15
             self.HUMAN_SIZE = self.NUM_JOINTS*self.JOINT_SIZE
             self.input_size = self.HUMAN_SIZE
-
-        print("input_size", self.input_size)
 
     def build_graph(self):
         """Build this model, i.e. its computational graph."""
@@ -146,10 +140,6 @@ class BaseModel(object):
     def build_output_layer(self):
         """Build the final dense output layer without any activation."""
         with tf.variable_scope("output_layer", reuse=self.reuse):
-            # self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
-            #                                             activation=self.activation_fn_out)
-            #
-            # self.outputs = self.decoder_output_dense(self.prediction_representation)
             self.outputs = tf.layers.dense(self.prediction_representation, self.input_size,
                                            use_bias=True, activation=self.activation_fn_out, reuse=self.reuse)
 
@@ -599,7 +589,6 @@ class Seq2seq(BaseModel):
         self.fidelity = self.config["fidelity"]
         self.continuity = self.config["continuity"]
         self.lambda_ = self.config["lambda_"]
-
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
