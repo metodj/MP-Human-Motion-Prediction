@@ -120,6 +120,85 @@ def is_rotmat(r):
     return n < 1e-6
 
 
+def rodrigues(input, rotmat_to_angle=True):
+    if rotmat_to_angle:
+        assert is_rotmat(input)
+        angle_axis = np.zeros(shape=(3,))
+
+        if np.all(input == np.eye(3)):
+            return angle_axis
+
+        rot = 0.5*(input - input.T)
+        angle_axis[0] = rot[2, 1]
+        angle_axis[1] = rot[0, 2]
+        angle_axis[2] = rot[1, 0]
+
+        norm = np.linalg.norm(angle_axis)
+        norm = np.clip(norm, -1, 1)
+
+        # TODO: which of the versions below is correct?
+        # angle_axis = angle_axis / norm
+        angle_axis = (angle_axis*np.arcsin(norm)) / norm
+        return angle_axis
+    else:
+        rot_ = np.zeros(shape=(3, 3))
+        theta = np.linalg.norm(input)
+        if theta < 1e-5:
+            return np.eye(3)
+        angle_vec = input / theta
+        rot_[0, 1] = -angle_vec[2]
+        rot_[0, 2] = angle_vec[1]
+        rot_[1, 0] = angle_vec[2]
+        rot_[1, 2] = -angle_vec[0]
+        rot_[2, 0] = -angle_vec[1]
+        rot_[2, 1] = angle_vec[0]
+
+        rot = np.cos(theta)*np.eye(3) + (1-np.cos(theta))*np.outer(angle_vec, angle_vec) \
+                                                    + np.sin(theta)*rot_
+        return rot
+
+
+
+def rotmats_to_eulers(p):
+    p = np.reshape(p, newshape=(-1, 3, 3))
+    # a = np.apply_over_axes(rodrigues, p, [1, 2])
+    # a = np.apply_along_axis(rodrigues, 1, p)
+
+    a = np.zeros(shape=(p.shape[0], 3), dtype=np.float32)
+
+    for i in range(p.shape[0]):
+        # theta = rotmat_to_euler(r)
+        # theta, _ = cv2.Rodrigues(r)
+        theta = rodrigues(p[i, :, :])
+
+        # TODO: divide by pi or not?
+        # a[i, :] = np.reshape(theta, newshape=(3,))/np.pi
+        a[i, :] = np.reshape(theta, newshape=(3,))
+
+    a = np.reshape(a, newshape=(-1, 15 * 3))
+    return a
+
+
+def eulers_to_rotmats(a):
+    s = a.shape  # (16, 24, 45)
+
+    a = np.reshape(a, newshape=(-1, 3))  # (384, 3)
+    p = np.zeros(shape=(a.shape[0], 3, 3), dtype=np.float32)  # (384, 3, 3)
+
+    for i in range(a.shape[0]):
+        # TODO: multiply by pi or not?
+        # theta = a[i, :] * np.pi  # (3, )
+
+        # r = euler_to_rotmat(theta)
+        # r, _ = cv2.Rodrigues(theta)
+        r = rodrigues(a[i, :], rotmat_to_angle=False)
+        p[i, :, :] = r
+
+    # p = get_closest_rotmat(p)
+    p = np.reshape(p, newshape=(s[0], s[1], 135))
+    return p
+
+
 def rodrigues_rok(input):
     if input.shape == (3,) or input.shape == (3, 1):
         def k_mat(axis):
@@ -168,7 +247,7 @@ def rot_mats_to_angle_axis(rot_mat_tensor):
         angle_axis_tensor = np.reshape(angle_axis_tensor, newshape=(-1, 45))  # (384, 45)
     elif len(s) == 3:
         angle_axis_tensor = np.reshape(angle_axis_tensor, newshape=(s[0], s[1], 45))  # (16, 24, 45)
-    return angle_axis_tensor
+    return angle_axis_tensor.astype(np.float32)
 
 
 def angle_axis_to_rot_mats(angle_axis_tensor):
@@ -181,6 +260,6 @@ def angle_axis_to_rot_mats(angle_axis_tensor):
         rot_mat_tensor = np.reshape(rot_mat_tensor, newshape=(-1, 135))  # (384, 135)
     elif len(s) == 3:
         rot_mat_tensor = np.reshape(rot_mat_tensor, newshape=(s[0], s[1], 135))  # (16, 24, 135)
-    return rot_mat_tensor
+    return rot_mat_tensor.astype(np.float32)
 
 

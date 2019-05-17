@@ -255,14 +255,12 @@ class TFRecordMotionDataset(Dataset):
             Returns:
                 angle_axis_tensor # (num_poses, 45)
             """
-            print("rot_mats", rot_mats_tensor.shape)
             angle_axis_tensor = rot_mats_to_angle_axis(rot_mats_tensor)
-            print("angle_axis", angle_axis_tensor.shape)
 
             return angle_axis_tensor
 
-        processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
-        # processed = tf.py_function(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
+        # processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
+        processed = tf.py_function(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
 
         # Set the shape on the output of `py_func` again explicitly, otherwise some functions might complain later on.
         processed.set_shape([None, 45])
