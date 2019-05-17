@@ -145,6 +145,8 @@ def rodrigues(input, rotmat_to_angle=True):
     else:
         rot_ = np.zeros(shape=(3, 3))
         theta = np.linalg.norm(input)
+        if theta < 1e-5:
+            return np.eye(3)
         angle_vec = input / theta
         rot_[0, 1] = -angle_vec[2]
         rot_[0, 2] = angle_vec[1]
