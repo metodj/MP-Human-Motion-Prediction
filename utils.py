@@ -94,7 +94,10 @@ def export_results(eval_result, output_file):
     to_csv(output_file, np.stack(sample_poses), sample_file_ids)
 
 
-def geodesic_distance(x1, x2):
+def geodesic_distance(x1, x2, angle_axis):
+    if angle_axis:
+        x1 = eulers_to_rotmats(x1)
+        x2 = eulers_to_rotmats(x2)
     y1 = tf.reshape(x1, shape=[-1, 3, 3])
     y2 = tf.reshape(x2, shape=[-1, 3, 3])
     y2 = tf.transpose(y2, perm=[0, 2, 1])
@@ -119,53 +122,60 @@ def is_rotmat(r):
     return n < 1e-6
 
 
-def rotmat_to_euler(r):
-    assert (is_rotmat(r))
+def rodrigues(input, rotmat_to_angle=True):
+    if rotmat_to_angle:
+        assert is_rotmat(input)
+        angle_axis = np.zeros(shape=(3,))
 
-    sy = np.sqrt(r[0, 0] * r[0, 0] + r[1, 0] * r[1, 0])
-    singular = sy < 1e-6
+        if np.all(input == np.eye(3)):
+            return angle_axis
 
-    if not singular:
-        x = np.arctan2(r[2, 1], r[2, 2])
-        y = np.arctan2(-r[2, 0], sy)
-        z = np.arctan2(r[1, 0], r[0, 0])
+        rot = 0.5*(input - input.T)
+        angle_axis[0] = rot[2, 1]
+        angle_axis[1] = rot[0, 2]
+        angle_axis[2] = rot[1, 0]
+
+        norm = np.linalg.norm(angle_axis)
+        norm = np.clip(norm, -1, 1)
+
+        # which of the versions below is correct?
+        # angle_axis = angle_axis / norm
+        angle_axis = (angle_axis*np.arcsin(norm)) / norm
+        return angle_axis
     else:
-        x = np.arctan2(-r[1, 2], r[1, 1])
-        y = np.arctan2(-r[2, 0], sy)
-        z = 0
+        rot_ = np.zeros(shape=(3, 3))
+        theta = np.linalg.norm(input)
+        if theta < 1e-5:
+            return np.eye(3)
+        angle_vec = input / theta
+        rot_[0, 1] = -angle_vec[2]
+        rot_[0, 2] = angle_vec[1]
+        rot_[1, 0] = angle_vec[2]
+        rot_[1, 2] = -angle_vec[0]
+        rot_[2, 0] = -angle_vec[1]
+        rot_[2, 1] = angle_vec[0]
 
-    return np.array([x, y, z])
+        rot = np.cos(theta)*np.eye(3) + (1-np.cos(theta))*np.outer(angle_vec, angle_vec) \
+                                                    + np.sin(theta)*rot_
+        return rot
 
-
-def euler_to_rotmat(theta):
-    r_x = np.array([[1, 0, 0],
-                    [0, np.cos(theta[0]), -np.sin(theta[0])],
-                    [0, np.sin(theta[0]), np.cos(theta[0])]
-                    ])
-
-    r_y = np.array([[np.cos(theta[1]), 0, np.sin(theta[1])],
-                    [0, 1, 0],
-                    [-np.sin(theta[1]), 0, np.cos(theta[1])]
-                    ])
-
-    r_z = np.array([[np.cos(theta[2]), -np.sin(theta[2]), 0],
-                    [np.sin(theta[2]), np.cos(theta[2]), 0],
-                    [0, 0, 1]
-                    ])
-
-    r = np.dot(r_z, np.dot(r_y, r_x))
-    return r
 
 
 def rotmats_to_eulers(p):
     p = np.reshape(p, newshape=(-1, 3, 3))
+    # a = np.apply_over_axes(rodrigues, p, [1, 2])
+    # a = np.apply_along_axis(rodrigues, 1, p)
+
     a = np.zeros(shape=(p.shape[0], 3), dtype=np.float32)
 
     for i in range(p.shape[0]):
-        r = p[i, :, :]
         # theta = rotmat_to_euler(r)
-        theta, _ = cv2.Rodrigues(r)
-        a[i, :] = np.reshape(theta, newshape=(3,))/np.pi
+        # theta, _ = cv2.Rodrigues(r)
+        theta = rodrigues(p[i, :, :])
+
+        # divide by pi or not?
+        # a[i, :] = np.reshape(theta, newshape=(3,))/np.pi
+        a[i, :] = np.reshape(theta, newshape=(3,))
 
     a = np.reshape(a, newshape=(-1, 15 * 3))
     return a
@@ -177,13 +187,16 @@ def eulers_to_rotmats(a):
     a = np.reshape(a, newshape=(-1, 3))  # (384, 3)
     p = np.zeros(shape=(a.shape[0], 3, 3), dtype=np.float32)  # (384, 3, 3)
 
-    for i in range(s[0]):
-        theta = a[i, :] * np.pi  # (3, )
+    for i in range(a.shape[0]):
+        # multiply by pi or not?
+        # theta = a[i, :] * np.pi  # (3, )
+
         # r = euler_to_rotmat(theta)
-        r, _ = cv2.Rodrigues(theta)
+        # r, _ = cv2.Rodrigues(theta)
+        r = rodrigues(a[i, :], rotmat_to_angle=False)
         p[i, :, :] = r
 
-    p = get_closest_rotmat(p)
+    # p = get_closest_rotmat(p)
     p = np.reshape(p, newshape=(s[0], s[1], 135))
     return p
 

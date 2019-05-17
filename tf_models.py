@@ -50,6 +50,11 @@ class BaseModel(object):
         self.decoder_input_dense = None
         self.decoder_output_dense = None
 
+        # standardization
+        self.standardization = self.config["standardization"]
+        self.means = kwargs.get("means", None)
+        self.vars = kwargs.get("vars", None)
+
         # The following members should be set by the child class.
         self.outputs = None  # The final predictions.
         self.prediction_targets = None  # The targets.
@@ -95,16 +100,27 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
+        if self.standardization:
+            predictions_pose = tf.math.add(tf.math.multiply(predictions_pose, self.vars), self.means)
+            targets_pose = tf.math.add(tf.math.multiply(targets_pose, self.vars), self.means)
+
         with tf.name_scope("loss"):
-            if not self.to_angles:
-                if self.loss == "geo":
-                    # Geodesic loss
-                    self.loss = geodesic_distance(targets_pose, predictions_pose)
-                else:
-                    # MSE
-                    diff = targets_pose - predictions_pose
-                    self.loss = tf.reduce_mean(tf.square(diff))
+            # if not self.to_angles:
+            #     if self.loss == "geo":
+            #         # Geodesic loss
+            #         self.loss = geodesic_distance(targets_pose, predictions_pose)
+            #     else:
+            #         # MSE
+            #         diff = targets_pose - predictions_pose
+            #         self.loss = tf.reduce_mean(tf.square(diff))
+            # else:
+            #     diff = targets_pose - predictions_pose
+            #     self.loss = tf.reduce_mean(tf.square(diff))
+            if self.loss == "geo":
+                # Geodesic loss
+                self.loss = geodesic_distance(targets_pose, predictions_pose, angle_axis=self.to_angles)
             else:
+                # MSE
                 diff = targets_pose - predictions_pose
                 self.loss = tf.reduce_mean(tf.square(diff))
 
@@ -293,22 +309,22 @@ class DummyModel(BaseModel):
                            ]
             outputs = session.run(output_feed)
 
-            if outputs[15] < 3:
-                print("\n")
-                print("loss", outputs[0])
-                print("data_inputs", outputs[4].shape)
-                print("data_targets", outputs[5].shape)
-                print("data_seq_len", outputs[6].shape)
-                print("data_ids", outputs[7].shape)
-                print("prediction_inputs", outputs[8].shape)
-                print("prediction_targets", outputs[9].shape)
-                print("inputs_hidden", outputs[10].shape)
-                print("rnn_state", outputs[11][0].shape, outputs[11][1].shape)
-                print("rnn_outputs", outputs[12].shape)
-                print("prediction_representation", outputs[13].shape)
-                print("outputs", outputs[14].shape)
-                print("predictions_pose", outputs[14][:, -self.target_seq_len:, :].shape)
-                print("targets_pose", outputs[9][:, -self.target_seq_len:, :].shape)
+            # if outputs[15] < 3:
+            #     print("\n")
+            #     print("loss", outputs[0])
+            #     print("data_inputs", outputs[4].shape)
+            #     print("data_targets", outputs[5].shape)
+            #     print("data_seq_len", outputs[6].shape)
+            #     print("data_ids", outputs[7].shape)
+            #     print("prediction_inputs", outputs[8].shape)
+            #     print("prediction_targets", outputs[9].shape)
+            #     print("inputs_hidden", outputs[10].shape)
+            #     print("rnn_state", outputs[11][0].shape, outputs[11][1].shape)
+            #     print("rnn_outputs", outputs[12].shape)
+            #     print("prediction_representation", outputs[13].shape)
+            #     print("outputs", outputs[14].shape)
+            #     print("predictions_pose", outputs[14][:, -self.target_seq_len:, :].shape)
+            #     print("targets_pose", outputs[9][:, -self.target_seq_len:, :].shape)
 
             return outputs[0], outputs[1], outputs[2]
         else:
@@ -348,6 +364,10 @@ class DummyModel(BaseModel):
                 targets = eulers_to_rotmats(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
             predictions = eulers_to_rotmats(predictions)  # (16, 24, 135)
+
+        if self.standardization:
+            predictions = (predictions * self.vars) + self.means
+            targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
@@ -520,6 +540,10 @@ class ZeroVelocityModel(BaseModel):
 
             predictions = eulers_to_rotmats(predictions)
 
+        if self.standardization:
+            predictions = (predictions * self.vars) + self.means
+            targets = (targets * self.vars) + self.means
+
         return predictions, targets, seed_sequence, data_id
 
     def predict(self, session):
@@ -576,6 +600,7 @@ class Seq2seq(BaseModel):
         self.continuity = self.config["continuity"]
         self.lambda_ = self.config["lambda_"]
 
+
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
         self.cell_decoder = None # The decoder cell.
@@ -628,6 +653,9 @@ class Seq2seq(BaseModel):
             self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1, :]  # (16, 135) (last seed frame)
 
         self.prediction_targets = self.data_inputs[:, self.source_seq_len:, :]  # 120:144 -> 24 frames (last)
+        
+        # if self.standardization:
+        #     self.prediction_targets = tf.math.add(tf.math.multiply(self.prediction_targets, self.vars), self.means)
 
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]),
                                           dtype=tf.int32)*self.sequence_length  # [24, ..., 24]
@@ -958,6 +986,10 @@ class Seq2seq(BaseModel):
             pred_val = np.reshape(predictions, [-1, self.NUM_JOINTS, 3, 3])  # (64, 24, 135)
             predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
             predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
+
+        if self.standardization:
+            predictions = (predictions * self.vars) + self.means
+            targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 

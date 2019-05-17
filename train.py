@@ -67,6 +67,7 @@ parser.add_argument("--lambda_", type=float, default=0.6, help="regularization p
 
 # data representation
 parser.add_argument("--to_angles", action="store_true", help="use angle representation")
+parser.add_argument("--stand", action="store_true", help="standardize exponential maps")
 
 ARGS = parser.parse_args()
 # EXPERIMENT_TIMESTAMP = str(int(time.time()))
@@ -111,7 +112,8 @@ def create_model(session):
                                            extract_windows_of=window_length,
                                            extract_random_windows=True,
                                            num_parallel_calls=16,
-                                           to_angles=config["to_angles"])
+                                           to_angles=config["to_angles"],
+                                           standardization=config["standardization"])
         train_pl = train_data.get_tf_samples()
 
         print("train_pl\t", str(type(train_pl)))
@@ -126,7 +128,8 @@ def create_model(session):
                                            extract_windows_of=window_length,
                                            extract_random_windows=False,
                                            num_parallel_calls=16,
-                                           to_angles=config["to_angles"])
+                                           to_angles=config["to_angles"],
+                                           standardization=config["standardization"])
         valid_pl = valid_data.get_tf_samples()
         print("valid_pl\t", str(type(valid_pl)))
         print(valid_pl.keys())
@@ -138,7 +141,9 @@ def create_model(session):
             data_pl=train_pl,
             mode=C.TRAIN,
             reuse=False,
-            dtype=tf.float32)
+            dtype=tf.float32,
+            means=train_data.mean_channel,
+            vars=train_data.var_channel)
         train_model.build_graph()
 
     # Create a copy of the training model for validation.
@@ -148,7 +153,10 @@ def create_model(session):
             data_pl=valid_pl,
             mode=C.EVAL,
             reuse=True,
-            dtype=tf.float32)
+            dtype=tf.float32,
+            means=train_data.mean_channel,
+            vars=train_data.var_channel
+        )
         valid_model.build_graph()
 
     # Count and print the number of trainable parameters.
@@ -223,6 +231,7 @@ def get_dummy_config(args):
     config["loss"] = args.loss
     config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
+    config["standardization"] = args.stand
 
     model_cls = models.DummyModel
 
@@ -267,6 +276,7 @@ def get_zero_velocity_model_config(args):
     config["loss"] = args.loss
     config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
+    config["standardization"] = args.stand
 
     model_cls = models.ZeroVelocityModel
 
@@ -316,6 +326,7 @@ def get_seq2seq_config(args):
     config["lambda_"] = args.lambda_
     config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
+    config["standardization"] = args.stand
 
     model_cls = models.Seq2seq
 
@@ -434,8 +445,8 @@ def train():
                     stop_signal = True
                     break
 
-            # if ARGS.use_cpu:
-            #     stop_signal = True
+            if ARGS.use_cpu:
+                stop_signal = True
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)

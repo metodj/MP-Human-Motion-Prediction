@@ -317,17 +317,17 @@ if __name__ == '__main__':
     tf.enable_eager_execution()
 
     # Where the data is stored.
-    # data_path = "./data/validation/poses-?????-of-?????"
-    data_path = "/cluster/project/infk/hilliges/lectures/mp19/project4/validation/poses-?????-of-?????"
+    data_path = "./data/validation/poses-?????-of-?????"
+    #data_path = "/cluster/project/infk/hilliges/lectures/mp19/project4/validation/poses-?????-of-?????"
 
     # Get some random samples.
     samples = _get_random_sample(data_path, n_samples=5)
 
     # If we set the video path, the animations will be saved to video instead of shown interactively.
-    video_path = os.environ['HOME'] if 'HOME' in os.environ else './'
-    video_path = os.path.join(video_path, "videos")
+    # video_path = os.environ['HOME'] if 'HOME' in os.environ else './'
+    # video_path = os.path.join(video_path, "videos")
 
     # Visualize each of them.
-    visualizer = Visualizer(SMPLForwardKinematics(), video_path=video_path)
+    visualizer = Visualizer(SMPLForwardKinematics())
     for i, sample in enumerate(samples):
         visualizer.visualize(sample[:120], sample[120:], 'random validation sample {}'.format(i))
