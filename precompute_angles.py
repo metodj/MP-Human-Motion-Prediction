@@ -3,8 +3,15 @@ import functools
 import numpy as np
 import os
 import time
+import argparse
 from utils import rot_mats_to_angle_axis
 
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--read_dir', required=True, default='./data/', help='Where the tfrecords are stored.')
+parser.add_argument('--write_dir', required=True, default='./data_angles/', help='Where to save tfrecords to. ')
+
+ARGS = parser.parse_args()
 
 def read_tfrecords(tfrecords_path, nr=5, angles=True):
     """Read tfrecord file.
@@ -83,8 +90,16 @@ if __name__ == '__main__':
 
     tf.enable_eager_execution()
 
-    data_path = './data/'
-    data_angles_path = './data_angles/'
+    # data_path = './data/'
+    # data_angles_path = './data_angles/'
+
+    data_path = ARGS.read_dir
+    data_angles_path = ARGS.write_dir
+
+    print(data_path)
+    print(data_angles_path)
+
+    # IMPORTANT: code here assumes writing directory already exists!
 
     for file in os.listdir(data_path):
         filename = os.fsdecode(file)
