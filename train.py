@@ -423,7 +423,6 @@ def train():
                     train_loss += step_loss
 
                     time_counter += (time.perf_counter() - start_time)
-                    # print("i:", step, "\tloss =", step_loss)
 
                     if step % ARGS.print_every == 0:
                         train_loss_avg = train_loss / ARGS.print_every
