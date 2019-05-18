@@ -167,7 +167,7 @@ class TFRecordMotionDataset(Dataset):
         # Speedup.
         self.tf_data = self.tf_data.prefetch(2)
         # UNCOMMENT when running on Leonhard
-        self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
+        # self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
 
     def _pp_filter(self, sample):
         """Filter out samples that are smaller then the required window size."""
@@ -259,8 +259,8 @@ class TFRecordMotionDataset(Dataset):
 
             return angle_axis_tensor
 
-        processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
-        # processed = tf.py_function(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
+        # processed = tf.py_func(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
+        processed = tf.py_function(_my_np_func, [tf_sample_dict["poses"]], tf.float32)
 
         # Set the shape on the output of `py_func` again explicitly, otherwise some functions might complain later on.
         processed.set_shape([None, 45])
