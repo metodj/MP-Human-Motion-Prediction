@@ -2,7 +2,8 @@ import tensorflow as tf
 import functools
 import numpy as np
 import os
-from utils import rotmats_to_eulers
+import time
+from utils import rot_mats_to_angle_axis
 
 
 def read_tfrecords(tfrecords_path, nr=5, angles=True):
@@ -39,7 +40,7 @@ def read_tfrecords(tfrecords_path, nr=5, angles=True):
     for s in iterator:
         tmp = s["poses"].numpy()
         if angles:
-            tmp = rotmats_to_eulers(tmp)
+            tmp = rot_mats_to_angle_axis(tmp)
         samples.append(tmp)
         # if counter >= nr:
         #     break
@@ -90,10 +91,12 @@ if __name__ == '__main__':
         for file2 in os.listdir(data_path + filename + '/'):
             filename2 = os.fsdecode(file2)
             if filename2[0] != "s":  # to exclude stats.npz files
+                start = time.time()
                 data_path_ = data_path + filename + '/' + filename2
                 data_angles_path_ = data_angles_path + filename + '/' + filename2
                 samples = read_tfrecords(data_path_)
                 write_tfrecords(samples, data_angles_path_)
+                print("Elapsed time: ", time.time() - start)
 
     # data_path = "./data/training/poses-00001-of-00016"
     # data_angle_path = "./data_angles/training/poses-00001-of-00016"

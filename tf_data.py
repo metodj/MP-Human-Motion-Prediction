@@ -132,9 +132,9 @@ class TFRecordMotionDataset(Dataset):
                                                 var=self.var_channel), num_parallel_calls=self.num_parallel_calls)
 
         # Preprocessing to euler angles
-        if self.to_angles:
-            self.tf_data = self.tf_data.map(functools.partial(self._pp_rot_mats_to_angle_axis),
-                                            num_parallel_calls=self.num_parallel_calls)
+        # if self.to_angles:
+        #     self.tf_data = self.tf_data.map(functools.partial(self._pp_rot_mats_to_angle_axis),
+        #                                     num_parallel_calls=self.num_parallel_calls)
 
         # Maybe extract windows
         if self.extract_windows_of > 0:
@@ -167,7 +167,7 @@ class TFRecordMotionDataset(Dataset):
         # Speedup.
         self.tf_data = self.tf_data.prefetch(2)
         # UNCOMMENT when running on Leonhard
-        # self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
+        self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
 
     def _pp_filter(self, sample):
         """Filter out samples that are smaller then the required window size."""
