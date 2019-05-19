@@ -237,7 +237,7 @@ class DummyModel(BaseModel):
         """Create recurrent cell."""
         with tf.variable_scope("rnn_cell", reuse=self.reuse):
             if self.cell_type == C.LSTM:
-                if self.self.num_rnn_layers == 1:
+                if self.num_rnn_layers == 1:
                     cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                 else:
                     cell = tf.nn.rnn_cell.MultiRNNCell([tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
@@ -591,6 +591,7 @@ class Seq2seq(BaseModel):
         self.fidelity = self.config["fidelity"]
         self.continuity = self.config["continuity"]
         self.lambda_ = self.config["lambda_"]
+        self.num_rnn_layers = self.config["num_rnn_layers"]
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
@@ -682,15 +683,35 @@ class Seq2seq(BaseModel):
         """Create recurrent cell."""
         with tf.variable_scope("rnn_cell", reuse=self.reuse):
             if self.cell_type == C.LSTM:
-                cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                if self.num_rnn_layers == 1:
+                    cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                else:
+                    cell = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    cell_fidelity = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    cell_continuity = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
             elif self.cell_type == C.GRU:
-                cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
-                cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
-                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
-                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                if self.num_rnn_layers == 1:
+                    cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                else:
+                    cell = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    cell_fidelity = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    cell_continuity = tf.nn.rnn_cell.MultiRNNCell(
+                        [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
@@ -717,13 +738,21 @@ class Seq2seq(BaseModel):
         """Linear layer for fidelity output."""
         with tf.variable_scope("fidelity_output", reuse=self.reuse):
             self.fidelity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
-
-            if self.cell_type == "gru":
-                self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar)
-                self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred)
+            if self.num_rnn_layers == 1:
+                if self.cell_type == "gru":
+                    self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar)
+                    self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred)
+                else:
+                    self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar[1])
+                    self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred[1])
             else:
-                self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar[1])
-                self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred[1])
+                if self.cell_type == "gru":
+                    self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar[0])
+                    self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred[0])
+                else:
+                    self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar[0][1])
+                    self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred[0][1])
+
 
     def build_loss_fidelity(self):
         self.loss_fidelity = tf.reduce_mean(tf.log(self.outputs_fid_tar + 1e-12)) + \
@@ -750,13 +779,20 @@ class Seq2seq(BaseModel):
         """Linear layer for continuity output."""
         with tf.variable_scope("continuity_output", reuse=self.reuse):
             self.continuity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
-
-            if self.cell_type == "gru":
-                self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar)
-                self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred)
+            if self.num_rnn_layers == 1:
+                if self.cell_type == "gru":
+                    self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar)
+                    self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred)
+                else:
+                    self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar[1])
+                    self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred[1])
             else:
-                self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar[1])
-                self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred[1])
+                if self.cell_type == "gru":
+                    self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar[0])
+                    self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred[0])
+                else:
+                    self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar[0][1])
+                    self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred[0][1])
 
     def build_loss_continuity(self):
         self.loss_continuity = tf.reduce_mean(tf.log(self.outputs_con_tar + 1e-12)) + \
@@ -869,6 +905,8 @@ class Seq2seq(BaseModel):
                                                            sequence_length=self.prediction_seq_len,
                                                            initial_state=self.initial_states_fidelity,
                                                            dtype=tf.float32)
+
+                print("state_fid_tar", self.state_fid_tar)
             self.build_fidelity_output()
             self.build_loss_fidelity()
 

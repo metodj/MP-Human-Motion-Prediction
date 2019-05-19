@@ -14,7 +14,7 @@ import numpy as np
 import os
 import functools
 
-from utils import rot_mats_to_angle_axis
+from pp_utils import rot_mats_to_angle_axis_cv2
 from constants import Constants as C
 
 
@@ -255,7 +255,7 @@ class TFRecordMotionDataset(Dataset):
             Returns:
                 angle_axis_tensor # (num_poses, 45)
             """
-            angle_axis_tensor = rot_mats_to_angle_axis(rot_mats_tensor)
+            angle_axis_tensor = rot_mats_to_angle_axis_cv2(rot_mats_tensor)
 
             return angle_axis_tensor
 
