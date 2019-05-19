@@ -906,7 +906,6 @@ class Seq2seq(BaseModel):
                                                            initial_state=self.initial_states_fidelity,
                                                            dtype=tf.float32)
 
-                print("state_fid_tar", self.state_fid_tar)
             self.build_fidelity_output()
             self.build_loss_fidelity()
 
