@@ -16,7 +16,7 @@ from constants import Constants as C
 from utils import get_activation_fn
 from utils import geodesic_distance
 from motion_metrics import get_closest_rotmat
-from utils import angle_axis_to_rot_mats
+from pp_utils import angle_axis_to_rot_mats_cv2
 
 
 class BaseModel(object):
@@ -110,13 +110,6 @@ class BaseModel(object):
             else:
                 diff = targets_pose - predictions_pose
                 self.loss = tf.reduce_mean(tf.square(diff))
-            # if self.loss == "geo":
-            #     # Geodesic loss
-            #     self.loss = geodesic_distance(targets_pose, predictions_pose, angle_axis=self.to_angles)
-            # else:
-            #     # MSE
-            #     diff = targets_pose - predictions_pose
-            #     self.loss = tf.reduce_mean(tf.square(diff))
 
     def optimization_routines(self):
         """Add an optimizer."""
@@ -187,7 +180,8 @@ class DummyModel(BaseModel):
         # Extract some config parameters specific to this model
         self.cell_type = self.config["cell_type"]
         self.cell_size = self.config["cell_size"]
-        self.input_hidden_size = self.config.get("input_hidden_size")
+        self.input_hidden_size = self.config["input_hidden_size"]
+        self.num_rnn_layers = self.config["num_rnn_layers"]
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. Defined in build_cell.
@@ -243,9 +237,17 @@ class DummyModel(BaseModel):
         """Create recurrent cell."""
         with tf.variable_scope("rnn_cell", reuse=self.reuse):
             if self.cell_type == C.LSTM:
-                cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                if self.self.num_rnn_layers == 1:
+                    cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                else:
+                    cell = tf.nn.rnn_cell.MultiRNNCell([tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                                                        for _ in range(self.num_rnn_layers)])
             elif self.cell_type == C.GRU:
-                cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                if self.self.num_rnn_layers == 1:
+                    cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                else:
+                    cell = tf.nn.rnn_cell.MultiRNNCell([tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                                                        for _ in range(self.num_rnn_layers)])
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
@@ -351,9 +353,9 @@ class DummyModel(BaseModel):
 
         if self.to_angles:
             if targets.shape[1] != 0:
-                targets = angle_axis_to_rot_mats(targets)  # train (16, 24, 135) / test (16, 24, 135)
+                targets = angle_axis_to_rot_mats_cv2(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
-            predictions = angle_axis_to_rot_mats(predictions)  # (16, 24, 135)
+            predictions = angle_axis_to_rot_mats_cv2(predictions)  # (16, 24, 135)
 
         if self.standardization:
             predictions = (predictions * self.vars) + self.means
@@ -526,9 +528,9 @@ class ZeroVelocityModel(BaseModel):
 
         if self.to_angles:
             if targets.shape[1] != 0:
-                targets = angle_axis_to_rot_mats(targets)
+                targets = angle_axis_to_rot_mats_cv2(targets)
 
-            predictions = angle_axis_to_rot_mats(predictions)
+            predictions = angle_axis_to_rot_mats_cv2(predictions)
 
         if self.standardization:
             predictions = (predictions * self.vars) + self.means
@@ -966,9 +968,9 @@ class Seq2seq(BaseModel):
 
         if self.to_angles:
             if targets.shape[1] != 0:
-                targets = angle_axis_to_rot_mats(targets)  # train (16, 24, 135) / test (16, 24, 135)
+                targets = angle_axis_to_rot_mats_cv2(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
-            predictions = angle_axis_to_rot_mats(predictions)  # (16, 24, 135)
+            predictions = angle_axis_to_rot_mats_cv2(predictions)  # (16, 24, 135)
         else:
             batch_size = predictions.shape[0]
             seq_length = predictions.shape[1]

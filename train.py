@@ -59,6 +59,7 @@ parser.add_argument("--residuals", action="store_true", help="Use of residuals i
 parser.add_argument("--optimizer", type=str, default="Adam", help="optimizer: Adam or SGD")
 parser.add_argument("--loss", type=str, default="geo", help="mean squared error (mse) or geodesic (geo) loss")
 parser.add_argument("--samp_loss", action="store_true", help="sampling loss: rnn output from previous is feed to input")
+parser.add_argument("--num_rnn_layers", type=int, default=1, help="depth of rnn layer")
 
 parser.add_argument("--log", action="store_true", help="create log file")
 parser.add_argument("--fidelity", action="store_true", help="fidelity discriminator")
@@ -232,6 +233,7 @@ def get_dummy_config(args):
     config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
     config["standardization"] = args.stand
+    config["num_rnn_layers"] = args.num_rnn_layers
 
     model_cls = models.DummyModel
 
@@ -327,6 +329,7 @@ def get_seq2seq_config(args):
     config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
     config["standardization"] = args.stand
+    config["num_rnn_layers"] = args.num_rnn_layers
 
     model_cls = models.Seq2seq
 

@@ -4,14 +4,14 @@ import numpy as np
 import os
 import time
 import argparse
-from utils import rot_mats_to_angle_axis
+from pp_utils import rot_mats_to_angle_axis, rot_mats_to_angle_axis_cv2
 
 parser = argparse.ArgumentParser()
-
-parser.add_argument('--read_dir', required=True, default='./data/', help='Where the tfrecords are stored.')
-parser.add_argument('--write_dir', required=True, default='./data_angles/', help='Where to save tfrecords to. ')
+parser.add_argument('--read_dir', required=True, default='C:/Users/roksi/data/', help='Where the tfrecords are stored.')
+parser.add_argument('--write_dir', required=True, default='C:/Users/roksi/data_angles/', help='Where to save tfrecords.')
 
 ARGS = parser.parse_args()
+
 
 def read_tfrecords(tfrecords_path, nr=5, angles=True):
     """Read tfrecord file.
@@ -47,7 +47,11 @@ def read_tfrecords(tfrecords_path, nr=5, angles=True):
     for s in iterator:
         tmp = s["poses"].numpy()
         if angles:
-            tmp = rot_mats_to_angle_axis(tmp)
+            # Own and map
+            # tmp = rot_mats_to_angle_axis(tmp)
+            # CV2 and for loop (2x faster)
+            tmp = rot_mats_to_angle_axis_cv2(tmp)
+            # print(s["poses"].numpy().shape, tmp.shape)
         samples.append(tmp)
         # if counter >= nr:
         #     break
@@ -89,9 +93,6 @@ def write_tfrecords(samples, output_filename):
 if __name__ == '__main__':
 
     tf.enable_eager_execution()
-
-    # data_path = './data/'
-    # data_angles_path = './data_angles/'
 
     data_path = ARGS.read_dir
     data_angles_path = ARGS.write_dir
