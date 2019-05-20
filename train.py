@@ -66,6 +66,8 @@ parser.add_argument("--fidelity", action="store_true", help="fidelity discrimina
 parser.add_argument("--continuity", action="store_true", help="continuity discriminator")
 parser.add_argument("--lambda_", type=float, default=0.6, help="regularization parameter for discriminators")
 parser.add_argument("--update_ckpt", action="store_true", help="Only store model if eval loss was improved during current epoch.")
+parser.add_argument("--weight_sharing", type=str, default="w/o", help="other options: seq2seq only (s2s), all (all)")
+
 
 # data representation
 parser.add_argument("--to_angles", action="store_true", help="use angle representation")
@@ -331,6 +333,7 @@ def get_seq2seq_config(args):
     config["to_angles"] = args.to_angles
     config["standardization"] = args.stand
     config["num_rnn_layers"] = args.num_rnn_layers
+    config["weight_sharing"] = args.weight_sharing
 
     model_cls = models.Seq2seq
 

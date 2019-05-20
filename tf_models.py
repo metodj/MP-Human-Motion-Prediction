@@ -44,7 +44,7 @@ class BaseModel(object):
 
         self.optimizer = self.config["optimizer"]
         self.loss = self.config["loss"]
-        self.max_gradient_norm = 5.0
+        self.max_gradient_norm = 2.5
 
         # standardization
         self.standardization = self.config["standardization"]
@@ -116,6 +116,7 @@ class BaseModel(object):
         # Use a simple SGD optimizer.
         if self.optimizer == 'SGD':
             optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
+
         else:
             optimizer = tf.train.AdamOptimizer(self.learning_rate)
 
@@ -592,6 +593,7 @@ class Seq2seq(BaseModel):
         self.continuity = self.config["continuity"]
         self.lambda_ = self.config["lambda_"]
         self.num_rnn_layers = self.config["num_rnn_layers"]
+        self.weight_sharing = self.config["weight_sharing"]
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
@@ -603,8 +605,9 @@ class Seq2seq(BaseModel):
         self.rnn_state_decoder = None
         self.inputs_hidden_encoder = None # The inputs to the encoder
         self.inputs_hidden = None  # The inputs to the decoder
+        self.decoder_output_dense = None # Decoder output layer in case of sampling loss
+        self.decoder_input_dense = None # Decoder input layer in case of sampling loss
 
-        self.decoder_linear_output = None  # output linear dense layer; needed in case of sampling loss
         self.output_decoder_sampl_loss = None  # for more efficient predicting in case sampling loss
 
         # Fidelity discriminator
@@ -619,6 +622,7 @@ class Seq2seq(BaseModel):
         self.state_fid_pred = None
         self.state_fid_tar = None
         self.loss_fidelity = None
+        self.linear_weight_sharing = None
 
         # continuity discriminator
         self.continuity_linear = None # continuity linear layer reference
@@ -667,14 +671,26 @@ class Seq2seq(BaseModel):
         """
         # We could e.g. pass them through a dense layer
         if self.input_hidden_size is not None:
-            if not self.sampling_loss:
-                with tf.variable_scope("input_layer", reuse=self.reuse):
-                    self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                         activation=self.activation_fn_in, reuse=self.reuse)
-
-            with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
-                self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
+            if self.weight_sharing == "w/o":
+                if not self.sampling_loss:
+                    with tf.variable_scope("input_layer", reuse=self.reuse):
+                        self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
+
+                with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
+                    self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
+                                                                 activation=self.activation_fn_in, reuse=self.reuse)
+            else:  # in case (s2s) and (all)
+                with tf.variable_scope("input_layer_linear", reuse=self.reuse):
+                    self.linear_weight_sharing = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                           activation=self.activation_fn_in)
+                    if not self.sampling_loss:
+                        with tf.variable_scope("input_layer", reuse=self.reuse):
+                            self.inputs_hidden = self.linear_weight_sharing(self.prediction_inputs)
+
+                    with tf.variable_scope("input_layer_linear", reuse=self.reuse):
+                        self.inputs_hidden_encoder = self.linear_weight_sharing(self.inputs_encoder)
+
         else:
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
@@ -717,13 +733,19 @@ class Seq2seq(BaseModel):
     def build_fidelity_input(self):
         """Fidelity linear input layer."""
         if self.input_hidden_size is not None:
-            with tf.variable_scope("input_fidelity", reuse=self.reuse):
-                self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                                                       activation=self.activation_fn_in)
+            if self.weight_sharing != 'all':
+                with tf.variable_scope("input_fidelity", reuse=self.reuse):
+                    self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                           activation=self.activation_fn_in)
 
-                self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
-                self.inputs_hidden_fid_pred = self.fidelity_linear(
-                    self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
+                    self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
+                    self.inputs_hidden_fid_pred = self.fidelity_linear(
+                        self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
+            else:
+                with tf.variable_scope("input_fidelity", reuse=self.reuse):
+                    self.inputs_hidden_fid_tar = self.linear_weight_sharing(self.prediction_targets)
+                    self.inputs_hidden_fid_pred = self.linear_weight_sharing(
+                        self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
         else:
             self.inputs_hidden_fid_tar = self.prediction_targets
             self.inputs_hidden_fid_pred = self.outputs
@@ -749,13 +771,19 @@ class Seq2seq(BaseModel):
     def build_continuity_input(self):
         """continuity linear input layer."""
         if self.input_hidden_size is not None:
-            with tf.variable_scope("input_continuity", reuse=self.reuse):
-                self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                                                         activation=self.activation_fn_in)
+            if self.weight_sharing != 'all':
+                with tf.variable_scope("input_continuity", reuse=self.reuse):
+                    self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                             activation=self.activation_fn_in)
 
-                self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
-                self.inputs_hidden_con_pred = self.continuity_linear(
-                    tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
+                    self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
+                    self.inputs_hidden_con_pred = self.continuity_linear(
+                        tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
+            else:
+                with tf.variable_scope("input_continuity", reuse=self.reuse):
+                    self.inputs_hidden_con_tar = self.linear_weight_sharing(self.data_inputs)
+                    self.inputs_hidden_con_pred = self.linear_weight_sharing(
+                        tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
         else:
             self.inputs_hidden_con_tar = self.data_inputs
             self.inputs_hidden_con_pred = tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1)
@@ -840,15 +868,19 @@ class Seq2seq(BaseModel):
                 self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
                                                             activation=self.activation_fn_out, name="input_layer")
 
-                self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                                                           activation=self.activation_fn_in, name="output_layer")
+                if self.weight_sharing == 'w/o':
+                    self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                               activation=self.activation_fn_in, name="output_layer")
 
                 state = self.initial_states_decoder
                 seed = self.prediction_inputs
 
                 self.rnn_outputs = []
                 for t in range(self.sequence_length):
-                    tmp = self.decoder_input_dense(seed)
+                    if self.weight_sharing == 'w/o':
+                        tmp = self.decoder_input_dense(seed)
+                    else:
+                        tmp = self.linear_weight_sharing(seed)
 
                     # RNN step
                     seed_, state = self.cell_decoder(inputs=tmp, state=state)
