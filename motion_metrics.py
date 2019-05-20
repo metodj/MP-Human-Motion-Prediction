@@ -287,3 +287,9 @@ class MetricsEngine(object):
             val = np.sum(final_metrics[m])
             s += "   {}: {:.3f}".format(m, val)
         return s
+
+    @classmethod
+    def get_eval_loss(cls, final_metrics):
+        for m in sorted(final_metrics):
+            val = np.sum(final_metrics[m])
+        return val

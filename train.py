@@ -65,6 +65,7 @@ parser.add_argument("--log", action="store_true", help="create log file")
 parser.add_argument("--fidelity", action="store_true", help="fidelity discriminator")
 parser.add_argument("--continuity", action="store_true", help="continuity discriminator")
 parser.add_argument("--lambda_", type=float, default=0.6, help="regularization parameter for discriminators")
+parser.add_argument("--update_ckpt", action="store_true", help="Only store model if eval loss was improved during current epoch.")
 
 # data representation
 parser.add_argument("--to_angles", action="store_true", help="use angle representation")
@@ -354,6 +355,9 @@ def train():
     # Limit TF to take a fraction of the GPU memory
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9, allow_growth=True)
     device_count = {"GPU": 0} if ARGS.use_cpu else {"GPU": 1}
+
+    eval_loss = 1e10
+    update_ckpt = ARGS.update_ckpt
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, device_count=device_count)) as sess:
 
         # Create the models and load the data.
@@ -457,6 +461,8 @@ def train():
                                                                       metrics_engine.get_summary_string(valid_metrics),
                                                                       valid_time))
 
+            eval_loss_ = metrics_engine.get_eval_loss(valid_metrics)
+
             # Write summaries to tensorboard.
             summary_feed = metrics_engine.get_summary_feed_dict(valid_metrics)
             summaries = sess.run(metrics_engine.all_summaries_op, feed_dict=summary_feed)
@@ -467,9 +473,18 @@ def train():
             sess.run(valid_iter.initializer)
 
             # Save the model. You might want to think about if it's always a good idea to do that.
-            print("Saving the model to {}".format(experiment_dir))
-            if not train_model.config["model_type"] == "zero_velocity":
-                saver.save(sess, os.path.normpath(os.path.join(experiment_dir, 'checkpoint')), global_step=step-1)
+            if update_ckpt:
+                if eval_loss_ < eval_loss:
+                    print("Saving the model to {}".format(experiment_dir))
+                    if not train_model.config["model_type"] == "zero_velocity":
+                        saver.save(sess, os.path.normpath(os.path.join(experiment_dir, 'checkpoint')), global_step=step-1)
+                    eval_loss = eval_loss_
+                else:
+                    print('Eval loss before was not improved, not storing the model.')
+            else:
+                print("Saving the model to {}".format(experiment_dir))
+                if not train_model.config["model_type"] == "zero_velocity":
+                    saver.save(sess, os.path.normpath(os.path.join(experiment_dir, 'checkpoint')), global_step=step - 1)
 
         print("End of Training.")
 
