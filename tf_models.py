@@ -44,7 +44,7 @@ class BaseModel(object):
 
         self.optimizer = self.config["optimizer"]
         self.loss = self.config["loss"]
-        self.max_gradient_norm = 2.5
+        self.max_gradient_norm = 5
 
         # standardization
         self.standardization = self.config["standardization"]
@@ -638,6 +638,8 @@ class Seq2seq(BaseModel):
         self.loss_continuity = None
         self.parameter_update_disc = None
 
+        self.epsilon = config['epsilon']
+
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
 
@@ -812,7 +814,8 @@ class Seq2seq(BaseModel):
         if self.optimizer == 'SGD':
             optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
         else:
-            optimizer = tf.train.AdamOptimizer(self.learning_rate)
+            optimizer = tf.train.AdamOptimizer(self.learning_rate, epsilon = self.epsilon)
+            # optimizer = tf.keras.optimizers.Adam(self.learning_rate, amsgrad=True)
 
         # Gradients and update operation for training the model.
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -825,6 +828,7 @@ class Seq2seq(BaseModel):
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.max_gradient_norm)
             self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params_gen),
                                                               global_step=self.global_step)
+
 
             if self.fidelity:
                 params_disc = [var for var in params if "continuity" in var.name or "fidelity" in var.name]

@@ -67,6 +67,7 @@ parser.add_argument("--continuity", action="store_true", help="continuity discri
 parser.add_argument("--lambda_", type=float, default=0.6, help="regularization parameter for discriminators")
 parser.add_argument("--update_ckpt", action="store_true", help="Only store model if eval loss was improved during current epoch.")
 parser.add_argument("--weight_sharing", type=str, default="w/o", help="other options: seq2seq only (s2s), all (all)")
+parser.add_argument("--epsilon", type=float, default="0.00000001", help="epsilon param for Adam optimizer")
 
 
 # data representation
@@ -334,6 +335,7 @@ def get_seq2seq_config(args):
     config["standardization"] = args.stand
     config["num_rnn_layers"] = args.num_rnn_layers
     config["weight_sharing"] = args.weight_sharing
+    config['epsilon'] = args.epsilon
 
     model_cls = models.Seq2seq
 
