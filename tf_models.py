@@ -761,6 +761,7 @@ class Seq2seq(BaseModel):
 
                     self.inputs_hidden_fid_tar = tf.layers.dense(self.prediction_targets, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
+                with tf.variable_scope("input_layer_linear", reuse=True):
                     self.inputs_hidden_fid_pred = tf.layers.dense(self.outputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
         else:
@@ -804,6 +805,7 @@ class Seq2seq(BaseModel):
 
                     self.inputs_hidden_con_tar = tf.layers.dense(self.data_inputs, self.input_hidden_size,
                                                                  activation=self.activation_fn_in, reuse=self.reuse)
+                with tf.variable_scope("input_layer_linear", reuse=True):
                     self.inputs_hidden_con_pred = tf.layers.dense(tf.concat(
                                             [self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1),
                                             self.input_hidden_size, activation=self.activation_fn_in, reuse=self.reuse)
@@ -874,56 +876,56 @@ class Seq2seq(BaseModel):
                                                   initial_state=self.initial_states,
                                                   dtype=tf.float32)
 
-        with tf.variable_scope("rnn_decoder", reuse=self.reuse):
-            self.initial_states_decoder = self.rnn_state
+        # with tf.variable_scope("rnn_decoder", reuse=self.reuse):
+        self.initial_states_decoder = self.rnn_state
 
-            if not self.sampling_loss:
-                self.rnn_outputs, self.rnn_state_decoder = tf.nn.dynamic_rnn(self.cell_decoder,
-                                                                             self.inputs_hidden,
-                                                                             sequence_length=self.prediction_seq_len,
-                                                                             initial_state=self.initial_states_decoder,
-                                                                             dtype=tf.float32)
-                self.prediction_representation = self.rnn_outputs
+        if not self.sampling_loss:
+            self.rnn_outputs, self.rnn_state_decoder = tf.nn.dynamic_rnn(self.cell_decoder,
+                                                                         self.inputs_hidden,
+                                                                         sequence_length=self.prediction_seq_len,
+                                                                         initial_state=self.initial_states_decoder,
+                                                                         dtype=tf.float32)
+            self.prediction_representation = self.rnn_outputs
 
-                self.build_output_layer()
-                if self.residuals:
-                    self.residuals_decoder()
+            self.build_output_layer()
+            if self.residuals:
+                self.residuals_decoder()
 
-            else:
-                self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
-                                                            activation=self.activation_fn_out, name="input_layer")
+        else:
+            self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
+                                                        activation=self.activation_fn_out, name="input_layer")
 
+            if self.weight_sharing == 'w/o':
+                self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+                                                           activation=self.activation_fn_in, name="output_layer")
+
+            state = self.initial_states_decoder
+            seed = self.prediction_inputs
+
+            self.rnn_outputs = []
+            for t in range(self.sequence_length):
                 if self.weight_sharing == 'w/o':
-                    self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                                                               activation=self.activation_fn_in, name="output_layer")
+                    tmp = self.decoder_input_dense(seed)
+                else:
+                    with tf.variable_scope("input_layer_linear", reuse=True):
+                        # tmp = self.linear_weight_sharing(seed)
+                        tmp = tf.layers.dense(seed, self.input_hidden_size,
+                                        activation=self.activation_fn_in, reuse=self.reuse)
 
-                state = self.initial_states_decoder
-                seed = self.prediction_inputs
+                # RNN step
+                seed_, state = self.cell_decoder(inputs=tmp, state=state)
+                seed_ = self.decoder_output_dense(seed_)
 
-                self.rnn_outputs = []
-                for t in range(self.sequence_length):
-                    if self.weight_sharing == 'w/o':
-                        tmp = self.decoder_input_dense(seed)
-                    else:
-                        with tf.variable_scope("input_layer_linear", reuse=True):
-                            # tmp = self.linear_weight_sharing(seed)
-                            tmp = tf.layers.dense(seed, self.input_hidden_size,
-                                            activation=self.activation_fn_in, reuse=self.reuse)
+                if self.residuals:
+                    seed_ = tf.add(seed_, seed)
 
-                    # RNN step
-                    seed_, state = self.cell_decoder(inputs=tmp, state=state)
-                    seed_ = self.decoder_output_dense(seed_)
+                self.rnn_outputs.append(seed_)
+                seed = seed_
 
-                    if self.residuals:
-                        seed_ = tf.add(seed_, seed)
+            self.rnn_state_decoder = state
+            self.rnn_outputs = tf.stack(self.rnn_outputs, axis=1)
 
-                    self.rnn_outputs.append(seed_)
-                    seed = seed_
-
-                self.rnn_state_decoder = state
-                self.rnn_outputs = tf.stack(self.rnn_outputs, axis=1)
-
-                self.outputs = self.rnn_outputs
+            self.outputs = self.rnn_outputs
 
         self.build_loss()
 
