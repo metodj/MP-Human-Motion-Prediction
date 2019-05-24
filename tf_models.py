@@ -892,8 +892,8 @@ class Seq2seq(BaseModel):
                 self.residuals_decoder()
 
         else:
-            self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
-                                                        activation=self.activation_fn_out, name="input_layer")
+            # self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
+            #                                             activation=self.activation_fn_out, name="input_layer")
 
             if self.weight_sharing == 'w/o':
                 self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
@@ -914,7 +914,10 @@ class Seq2seq(BaseModel):
 
                 # RNN step
                 seed_, state = self.cell_decoder(inputs=tmp, state=state)
-                seed_ = self.decoder_output_dense(seed_)
+                with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE): # be careful with this tf.AUTO_REUSE...
+                    # seed_ = self.decoder_output_dense(seed_)
+                    seed_ = tf.layers.dense(seed_, self.input_size, use_bias=True,
+                                             activation=self.activation_fn_out, reuse=self.reuse)
 
                 if self.residuals:
                     seed_ = tf.add(seed_, seed)
