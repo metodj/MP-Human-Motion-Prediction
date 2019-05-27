@@ -724,16 +724,16 @@ class Seq2seq(BaseModel):
                 cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 if self.num_rnn_layers == 1:
-                    cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                    cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                    cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                 else:
                     cell = tf.nn.rnn_cell.MultiRNNCell(
                         [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
                     cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
                         [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
 
-                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
