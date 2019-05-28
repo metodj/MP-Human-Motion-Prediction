@@ -594,6 +594,7 @@ class Seq2seq(BaseModel):
         self.lambda_ = self.config["lambda_"]
         self.num_rnn_layers = self.config["num_rnn_layers"]
         self.weight_sharing = self.config["weight_sharing"]
+        self.weight_sharing_rnn = self.config["weight_sharing_rnn"]
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
@@ -622,7 +623,6 @@ class Seq2seq(BaseModel):
         self.state_fid_pred = None
         self.state_fid_tar = None
         self.loss_fidelity = None
-        self.linear_weight_sharing = None
 
         # continuity discriminator
         self.continuity_linear = None # continuity linear layer reference
@@ -683,25 +683,18 @@ class Seq2seq(BaseModel):
                     self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                  activation=self.activation_fn_in, reuse=self.reuse)
             else:  # in case (s2s) and (all)
-                # with tf.variable_scope("input_layer_linear", reuse=self.reuse):
-                #     self.linear_weight_sharing = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                #                                            activation=self.activation_fn_in)
                 if not self.sampling_loss:
                     with tf.variable_scope("input_layer_linear", reuse=self.reuse):
-                        # self.inputs_hidden = self.linear_weight_sharing(self.prediction_inputs)
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
 
                     with tf.variable_scope("input_layer_linear", reuse=True):
-                        # self.inputs_hidden_encoder = self.linear_weight_sharing(self.inputs_encoder)
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
                 else:
                     with tf.variable_scope("input_layer_linear", reuse=self.reuse):
-                        # self.inputs_hidden_encoder = self.linear_weight_sharing(self.inputs_encoder)
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
-
 
         else:
             self.inputs_hidden = self.prediction_inputs
@@ -713,24 +706,28 @@ class Seq2seq(BaseModel):
             if self.cell_type == C.LSTM:
                 if self.num_rnn_layers == 1:
                     cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                    cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                    if not self.weight_sharing_rnn:
+                        cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                 else:
                     cell = tf.nn.rnn_cell.MultiRNNCell(
                         [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
-                    cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
-                        [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    if not self.weight_sharing_rnn:
+                        cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
+                            [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
 
                 cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                 cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 if self.num_rnn_layers == 1:
                     cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
-                    cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                    if not self.weight_sharing_rnn:
+                        cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                 else:
                     cell = tf.nn.rnn_cell.MultiRNNCell(
                         [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
-                    cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
-                        [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
+                    if not self.weight_sharing_rnn:
+                        cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
+                            [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse) for _ in range(self.num_rnn_layers)])
 
                 cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                 cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
@@ -738,7 +735,10 @@ class Seq2seq(BaseModel):
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
             self.cell = cell
-            self.cell_decoder = cell_decoder
+            if not self.weight_sharing_rnn:
+                self.cell_decoder = cell_decoder
+            else:
+                self.cell_decoder = cell
             self.cell_fidelity = cell_fidelity
             self.cell_continuity = cell_continuity
 
@@ -895,7 +895,7 @@ class Seq2seq(BaseModel):
             # self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
             #                                             activation=self.activation_fn_out, name="input_layer")
 
-            if self.weight_sharing == 'w/o':
+            if self.weight_sharing == 'w/o' and self.input_hidden_size is not None:
                 self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
                                                            activation=self.activation_fn_in, name="output_layer")
 
@@ -904,13 +904,16 @@ class Seq2seq(BaseModel):
 
             self.rnn_outputs = []
             for t in range(self.sequence_length):
-                if self.weight_sharing == 'w/o':
-                    tmp = self.decoder_input_dense(seed)
+                if self.input_hidden_size is not None:
+                    if self.weight_sharing == 'w/o':
+                        tmp = self.decoder_input_dense(seed)
+                    else:
+                        with tf.variable_scope("input_layer_linear", reuse=True):
+                            # tmp = self.linear_weight_sharing(seed)
+                            tmp = tf.layers.dense(seed, self.input_hidden_size,
+                                            activation=self.activation_fn_in, reuse=self.reuse)
                 else:
-                    with tf.variable_scope("input_layer_linear", reuse=True):
-                        # tmp = self.linear_weight_sharing(seed)
-                        tmp = tf.layers.dense(seed, self.input_hidden_size,
-                                        activation=self.activation_fn_in, reuse=self.reuse)
+                    tmp = seed
 
                 # RNN step
                 seed_, state = self.cell_decoder(inputs=tmp, state=state)
