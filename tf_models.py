@@ -675,7 +675,7 @@ class Seq2seq(BaseModel):
         if self.input_hidden_size is not None:
             if self.weight_sharing == "w/o":
                 if not self.sampling_loss:
-                    with tf.variable_scope("input_layer", reuse=self.reuse):
+                    with tf.variable_scope("input_layer_decoder", reuse=self.reuse):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
 
@@ -684,15 +684,15 @@ class Seq2seq(BaseModel):
                                                                  activation=self.activation_fn_in, reuse=self.reuse)
             else:  # in case (s2s) and (all)
                 if not self.sampling_loss:
-                    with tf.variable_scope("input_layer_linear", reuse=self.reuse):
+                    with tf.variable_scope("input_layer_shared", reuse=self.reuse):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
 
-                    with tf.variable_scope("input_layer_linear", reuse=True):
+                    with tf.variable_scope("input_layer_shared", reuse=True):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                                     activation=self.activation_fn_in, reuse=self.reuse)
+                                                                     activation=self.activation_fn_in)
                 else:
-                    with tf.variable_scope("input_layer_linear", reuse=self.reuse):
+                    with tf.variable_scope("input_layer_shared", reuse=self.reuse):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
 
@@ -754,16 +754,16 @@ class Seq2seq(BaseModel):
                     self.inputs_hidden_fid_pred = self.fidelity_linear(
                         self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
             else:
-                with tf.variable_scope("input_layer_linear", reuse=True):
+                with tf.variable_scope("input_layer_shared", reuse=True):
                     # self.inputs_hidden_fid_tar = self.linear_weight_sharing(self.prediction_targets)
                     # self.inputs_hidden_fid_pred = self.linear_weight_sharing(
                     #     self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
 
                     self.inputs_hidden_fid_tar = tf.layers.dense(self.prediction_targets, self.input_hidden_size,
-                                                             activation=self.activation_fn_in, reuse=self.reuse)
-                with tf.variable_scope("input_layer_linear", reuse=True):
+                                                             activation=self.activation_fn_in)
+                with tf.variable_scope("input_layer_shared", reuse=True):
                     self.inputs_hidden_fid_pred = tf.layers.dense(self.outputs, self.input_hidden_size,
-                                                             activation=self.activation_fn_in, reuse=self.reuse)
+                                                             activation=self.activation_fn_in)
         else:
             self.inputs_hidden_fid_tar = self.prediction_targets
             self.inputs_hidden_fid_pred = self.outputs
@@ -798,17 +798,17 @@ class Seq2seq(BaseModel):
                     self.inputs_hidden_con_pred = self.continuity_linear(
                         tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
             else:
-                with tf.variable_scope("input_layer_linear", reuse=True):
+                with tf.variable_scope("input_layer_shared", reuse=True):
                     # self.inputs_hidden_con_tar = self.linear_weight_sharing(self.data_inputs)
                     # self.inputs_hidden_con_pred = self.linear_weight_sharing(
                     #     tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
 
                     self.inputs_hidden_con_tar = tf.layers.dense(self.data_inputs, self.input_hidden_size,
-                                                                 activation=self.activation_fn_in, reuse=self.reuse)
-                with tf.variable_scope("input_layer_linear", reuse=True):
+                                                                 activation=self.activation_fn_in)
+                with tf.variable_scope("input_layer_shared", reuse=True):
                     self.inputs_hidden_con_pred = tf.layers.dense(tf.concat(
                                             [self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1),
-                                            self.input_hidden_size, activation=self.activation_fn_in, reuse=self.reuse)
+                                            self.input_hidden_size, activation=self.activation_fn_in)
         else:
             self.inputs_hidden_con_tar = self.data_inputs
             self.inputs_hidden_con_pred = tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1)
@@ -892,12 +892,10 @@ class Seq2seq(BaseModel):
                 self.residuals_decoder()
 
         else:
-            # self.decoder_output_dense = tf.layers.Dense(self.input_size, use_bias=True,
-            #                                             activation=self.activation_fn_out, name="input_layer")
 
-            if self.weight_sharing == 'w/o' and self.input_hidden_size is not None:
-                self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                                                           activation=self.activation_fn_in, name="output_layer")
+            # if self.weight_sharing == 'w/o' and self.input_hidden_size is not None:
+            #     self.decoder_input_dense = tf.layers.Dense(self.input_hidden_size, use_bias=True,
+            #                                                activation=self.activation_fn_in)
 
             state = self.initial_states_decoder
             seed = self.prediction_inputs
@@ -906,12 +904,14 @@ class Seq2seq(BaseModel):
             for t in range(self.sequence_length):
                 if self.input_hidden_size is not None:
                     if self.weight_sharing == 'w/o':
-                        tmp = self.decoder_input_dense(seed)
+                        with tf.variable_scope("input_layer_decoder", reuse=tf.AUTO_REUSE):
+                            tmp = tf.layers.dense(seed, self.input_hidden_size,
+                                                activation=self.activation_fn_in)
                     else:
-                        with tf.variable_scope("input_layer_linear", reuse=True):
+                        with tf.variable_scope("input_layer_shared", reuse=True):
                             # tmp = self.linear_weight_sharing(seed)
                             tmp = tf.layers.dense(seed, self.input_hidden_size,
-                                            activation=self.activation_fn_in, reuse=self.reuse)
+                                            activation=self.activation_fn_in)
                 else:
                     tmp = seed
 
@@ -920,7 +920,7 @@ class Seq2seq(BaseModel):
                 with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE): # be careful with this tf.AUTO_REUSE...
                     # seed_ = self.decoder_output_dense(seed_)
                     seed_ = tf.layers.dense(seed_, self.input_size, use_bias=True,
-                                             activation=self.activation_fn_out, reuse=self.reuse)
+                                             activation=self.activation_fn_out)
 
                 if self.residuals:
                     seed_ = tf.add(seed_, seed)
