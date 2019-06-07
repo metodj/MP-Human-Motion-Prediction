@@ -760,6 +760,12 @@ class Seq2seq(BaseModel):
             else:
                 self.cell_decoder = cell
 
+            if self.dropout:
+                self.cell = tf.nn.rnn_cell.DropoutWrapper(self.cell, input_keep_prob=self.dropout,
+                                                          output_keep_prob=self.dropout, state_keep_prob=self.dropout)
+                self.cell_decoder  = tf.nn.rnn_cell.DropoutWrapper(self.cell_decoder , input_keep_prob=self.dropout,
+                                                          output_keep_prob=self.dropout, state_keep_prob=self.dropout)
+
             self.cell_fidelity = cell_fidelity
             self.cell_continuity = cell_continuity
 
