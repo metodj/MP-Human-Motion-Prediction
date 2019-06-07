@@ -61,9 +61,11 @@ class BaseModel(object):
         self.parameter_update = None  # The training op.
         self.summary_update = None  # Summary op.
 
+        self.to_angles = self.config["to_angles"]
+        self.dropout = self.config['dropout']
+
         # Hard-coded parameters that define the input size.
         # Feature representation
-        self.to_angles = self.config["to_angles"]
         if not self.to_angles:
             self.JOINT_SIZE = 3*3
             self.NUM_JOINTS = 15
@@ -136,6 +138,9 @@ class BaseModel(object):
         with tf.variable_scope("output_layer", reuse=self.reuse):
             self.outputs = tf.layers.dense(self.prediction_representation, self.input_size,
                                            use_bias=True, activation=self.activation_fn_out, reuse=self.reuse)
+            
+            if self.dropout:
+                self.outputs = tf.layers.dropout(self.outputs, training=not self.reuse)
 
             print("outputs\t", self.outputs.get_shape())
 
@@ -595,6 +600,7 @@ class Seq2seq(BaseModel):
         self.num_rnn_layers = self.config["num_rnn_layers"]
         self.weight_sharing = self.config["weight_sharing"]
         self.weight_sharing_rnn = self.config["weight_sharing_rnn"]
+        self.epsilon = self.config['epsilon']
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
@@ -638,8 +644,6 @@ class Seq2seq(BaseModel):
         self.loss_continuity = None
         self.parameter_update_disc = None
 
-        self.epsilon = config['epsilon']
-
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
 
@@ -678,23 +682,37 @@ class Seq2seq(BaseModel):
                     with tf.variable_scope("input_layer_decoder", reuse=self.reuse):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
+                        if self.dropout:
+                            self.inputs_hidden = tf.layers.dropout(self.inputs_hidden, training=not self.reuse)
 
                 with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
                     self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                  activation=self.activation_fn_in, reuse=self.reuse)
+                    if self.dropout:
+                        self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder, training=not self.reuse)
+
             else:  # in case (s2s) and (all)
                 if not self.sampling_loss:
                     with tf.variable_scope("input_layer_shared", reuse=self.reuse):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
+                        if self.dropout:
+                            self.inputs_hidden = tf.layers.dropout(self.inputs_hidden,
+                                                                           training=not self.reuse)
 
                     with tf.variable_scope("input_layer_shared", reuse=True):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in)
+                        if self.dropout:
+                            self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder,
+                                                                           training=not self.reuse)
                 else:
                     with tf.variable_scope("input_layer_shared", reuse=self.reuse):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
+                        if self.dropout:
+                            self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder,
+                                                                           training=not self.reuse)
 
         else:
             self.inputs_hidden = self.prediction_inputs
@@ -753,6 +771,12 @@ class Seq2seq(BaseModel):
                     self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
                     self.inputs_hidden_fid_pred = self.fidelity_linear(
                         self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
+
+                    if self.dropout:
+                        self.inputs_hidden_fid_tar = tf.layers.dropout(self.inputs_hidden_fid_tar,
+                                                                       training=not self.reuse)
+                        self.inputs_hidden_fid_pred = tf.layers.dropout(self.inputs_hidden_fid_pred,
+                                                                       training=not self.reuse)
             else:
                 with tf.variable_scope("input_layer_shared", reuse=True):
                     # self.inputs_hidden_fid_tar = self.linear_weight_sharing(self.prediction_targets)
@@ -761,9 +785,15 @@ class Seq2seq(BaseModel):
 
                     self.inputs_hidden_fid_tar = tf.layers.dense(self.prediction_targets, self.input_hidden_size,
                                                              activation=self.activation_fn_in)
+                    if self.dropout:
+                        self.inputs_hidden_fid_tar = tf.layers.dropout(self.inputs_hidden_fid_tar,
+                                                                       training=not self.reuse)
                 with tf.variable_scope("input_layer_shared", reuse=True):
                     self.inputs_hidden_fid_pred = tf.layers.dense(self.outputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in)
+                    if self.dropout:
+                        self.inputs_hidden_fid_pred = tf.layers.dropout(self.inputs_hidden_fid_pred,
+                                                                       training=not self.reuse)
         else:
             self.inputs_hidden_fid_tar = self.prediction_targets
             self.inputs_hidden_fid_pred = self.outputs
@@ -776,6 +806,7 @@ class Seq2seq(BaseModel):
                 self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar)
                 self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred)
             else:
+                # is this correct ??
                 self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar[1])
                 self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred[1])
 
@@ -797,6 +828,12 @@ class Seq2seq(BaseModel):
                     self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
                     self.inputs_hidden_con_pred = self.continuity_linear(
                         tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
+
+                    if self.dropout:
+                        self.inputs_hidden_con_tar = tf.layers.dropout(self.inputs_hidden_con_tar,
+                                                                       training=not self.reuse)
+                        self.inputs_hidden_con_pred = tf.layers.dropout(self.inputs_hidden_con_pred,
+                                                                       training=not self.reuse)
             else:
                 with tf.variable_scope("input_layer_shared", reuse=True):
                     # self.inputs_hidden_con_tar = self.linear_weight_sharing(self.data_inputs)
@@ -805,10 +842,18 @@ class Seq2seq(BaseModel):
 
                     self.inputs_hidden_con_tar = tf.layers.dense(self.data_inputs, self.input_hidden_size,
                                                                  activation=self.activation_fn_in)
+
+                    if self.dropout:
+                        self.inputs_hidden_con_tar = tf.layers.dropout(self.inputs_hidden_con_tar,
+                                                                       training=not self.reuse)
+
                 with tf.variable_scope("input_layer_shared", reuse=True):
                     self.inputs_hidden_con_pred = tf.layers.dense(tf.concat(
                                             [self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1),
                                             self.input_hidden_size, activation=self.activation_fn_in)
+                    if self.dropout:
+                        self.inputs_hidden_con_pred = tf.layers.dropout(self.inputs_hidden_con_pred,
+                                                                       training=not self.reuse)
         else:
             self.inputs_hidden_con_tar = self.data_inputs
             self.inputs_hidden_con_pred = tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1)
@@ -907,11 +952,16 @@ class Seq2seq(BaseModel):
                         with tf.variable_scope("input_layer_decoder", reuse=tf.AUTO_REUSE):
                             tmp = tf.layers.dense(seed, self.input_hidden_size,
                                                 activation=self.activation_fn_in)
+                            if self.dropout:
+                                tmp = tf.layers.dropout(tmp, training=not self.reuse)
                     else:
                         with tf.variable_scope("input_layer_shared", reuse=True):
                             # tmp = self.linear_weight_sharing(seed)
                             tmp = tf.layers.dense(seed, self.input_hidden_size,
                                             activation=self.activation_fn_in)
+
+                            if self.dropout:
+                                tmp = tf.layers.dropout(tmp, training=not self.reuse)
                 else:
                     tmp = seed
 
@@ -921,6 +971,9 @@ class Seq2seq(BaseModel):
                     # seed_ = self.decoder_output_dense(seed_)
                     seed_ = tf.layers.dense(seed_, self.input_size, use_bias=True,
                                              activation=self.activation_fn_out)
+
+                    if self.dropout:
+                        seed_= tf.layers.dropout(seed_, training=not self.reuse)
 
                 if self.residuals:
                     seed_ = tf.add(seed_, seed)

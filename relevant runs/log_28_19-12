@@ -1,0 +1,546 @@
+train_pl	 <class 'dict'>
+dict_keys(['seq_len', 'inputs', 'targets', 'id'])
+valid_pl	 <class 'dict'>
+dict_keys(['seq_len', 'inputs', 'targets', 'id'])
+{'model_type': 'seq2seq', 'seed': 4313, 'learning_rate': 0.0005, 'cell_type': 'lstm', 'cell_size': 1024, 'input_hidden_size': 1024, 'source_seq_len': 120, 'target_seq_len': 24, 'batch_size': 16, 'activation_fn': None, 'residuals': True, 'optimizer': 'Adam', 'loss': 'geo', 'sampling_loss': True, 'fidelity': False, 'continuity': False, 'lambda_': 0.6, 'activation_input': None, 'to_angles': False, 'standardization': False, 'num_rnn_layers': 1, 'weight_sharing': 's2s', 'weight_sharing_rnn': True, 'epsilon': 1e-08}
+{'model_type': 'seq2seq', 'seed': 4313, 'learning_rate': 0.0005, 'cell_type': 'lstm', 'cell_size': 1024, 'input_hidden_size': 1024, 'source_seq_len': 120, 'target_seq_len': 24, 'batch_size': 16, 'activation_fn': None, 'residuals': True, 'optimizer': 'Adam', 'loss': 'geo', 'sampling_loss': True, 'fidelity': False, 'continuity': False, 'lambda_': 0.6, 'activation_input': None, 'to_angles': False, 'standardization': False, 'num_rnn_layers': 1, 'weight_sharing': 's2s', 'weight_sharing_rnn': True, 'epsilon': 1e-08}
+input_layer_shared/dense/kernel:0 (135, 1024)
+input_layer_shared/dense/bias:0 (1024,)
+rnn_encoder/rnn/lstm_cell/kernel:0 (2048, 4096)
+rnn_encoder/rnn/lstm_cell/bias:0 (4096,)
+output_layer/dense/kernel:0 (1024, 135)
+output_layer/dense/bias:0 (135,)
+# of parameters: 8670343
+Experiment directory experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Creating model with fresh parameters.
+Model created
+Running Training Loop.
+Train [0100] 	 Loss: 2.87727 	 time/batch: 0.179
+Train [0200] 	 Loss: 0.02454 	 time/batch: 0.158
+Valid [0200] 	 metrics until 24:   joint_angle: 6.015 	 total_time: 18.034
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [0300] 	 Loss: 0.02174 	 time/batch: 0.151
+Train [0400] 	 Loss: 0.01165 	 time/batch: 0.158
+Valid [0400] 	 metrics until 24:   joint_angle: 5.837 	 total_time: 17.848
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [0500] 	 Loss: 0.02014 	 time/batch: 0.156
+Train [0600] 	 Loss: 0.01087 	 time/batch: 0.150
+Valid [0600] 	 metrics until 24:   joint_angle: 5.431 	 total_time: 17.809
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [0700] 	 Loss: 0.01707 	 time/batch: 0.158
+Train [0800] 	 Loss: 0.02226 	 time/batch: 0.151
+Valid [0800] 	 metrics until 24:   joint_angle: 5.480 	 total_time: 17.923
+Eval loss before was not improved, not storing the model.
+Train [0900] 	 Loss: 0.00952 	 time/batch: 0.155
+Train [1000] 	 Loss: 0.01608 	 time/batch: 0.156
+Valid [1000] 	 metrics until 24:   joint_angle: 5.250 	 total_time: 18.164
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [1100] 	 Loss: 0.01017 	 time/batch: 0.152
+Train [1200] 	 Loss: 0.00988 	 time/batch: 0.160
+Valid [1200] 	 metrics until 24:   joint_angle: 4.891 	 total_time: 17.755
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [1300] 	 Loss: 0.01267 	 time/batch: 0.153
+Train [1400] 	 Loss: 0.00812 	 time/batch: 0.152
+Valid [1400] 	 metrics until 24:   joint_angle: 4.656 	 total_time: 18.412
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [1500] 	 Loss: 0.01152 	 time/batch: 0.158
+Train [1600] 	 Loss: 0.01011 	 time/batch: 0.152
+Valid [1600] 	 metrics until 24:   joint_angle: 4.538 	 total_time: 17.922
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [1700] 	 Loss: 0.00761 	 time/batch: 0.156
+Train [1800] 	 Loss: 0.01247 	 time/batch: 0.156
+Valid [1800] 	 metrics until 24:   joint_angle: 4.471 	 total_time: 17.418
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [1900] 	 Loss: 0.00872 	 time/batch: 0.151
+Train [2000] 	 Loss: 0.00911 	 time/batch: 0.158
+Valid [2000] 	 metrics until 24:   joint_angle: 4.401 	 total_time: 17.900
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [2100] 	 Loss: 0.01102 	 time/batch: 0.151
+Train [2200] 	 Loss: 0.00766 	 time/batch: 0.154
+Valid [2200] 	 metrics until 24:   joint_angle: 4.350 	 total_time: 18.043
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [2300] 	 Loss: 0.01138 	 time/batch: 0.157
+Train [2400] 	 Loss: 0.00898 	 time/batch: 0.153
+Valid [2400] 	 metrics until 24:   joint_angle: 4.394 	 total_time: 17.572
+Eval loss before was not improved, not storing the model.
+Train [2500] 	 Loss: 0.00718 	 time/batch: 0.158
+Train [2600] 	 Loss: 0.02551 	 time/batch: 0.155
+Valid [2600] 	 metrics until 24:   joint_angle: 4.325 	 total_time: 18.105
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [2700] 	 Loss: 0.01038 	 time/batch: 0.150
+Train [2800] 	 Loss: 0.01133 	 time/batch: 0.156
+Valid [2800] 	 metrics until 24:   joint_angle: 4.226 	 total_time: 17.770
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [2900] 	 Loss: 0.01099 	 time/batch: 0.152
+Train [3000] 	 Loss: 0.00871 	 time/batch: 0.156
+Valid [3000] 	 metrics until 24:   joint_angle: 4.197 	 total_time: 17.823
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [3100] 	 Loss: 0.01268 	 time/batch: 0.156
+Train [3200] 	 Loss: 0.00872 	 time/batch: 0.151
+Valid [3200] 	 metrics until 24:   joint_angle: 4.188 	 total_time: 18.328
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [3300] 	 Loss: 0.00935 	 time/batch: 0.158
+Train [3400] 	 Loss: 0.01370 	 time/batch: 0.152
+Valid [3400] 	 metrics until 24:   joint_angle: 4.225 	 total_time: 17.777
+Eval loss before was not improved, not storing the model.
+Train [3500] 	 Loss: 0.00864 	 time/batch: 0.152
+Train [3600] 	 Loss: 0.01230 	 time/batch: 0.157
+Valid [3600] 	 metrics until 24:   joint_angle: 4.101 	 total_time: 18.183
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [3700] 	 Loss: 0.00925 	 time/batch: 0.152
+Train [3800] 	 Loss: 0.00717 	 time/batch: 0.157
+Valid [3800] 	 metrics until 24:   joint_angle: 4.042 	 total_time: 17.975
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [3900] 	 Loss: 0.01330 	 time/batch: 0.156
+Train [4000] 	 Loss: 0.00810 	 time/batch: 0.150
+Valid [4000] 	 metrics until 24:   joint_angle: 4.083 	 total_time: 18.135
+Eval loss before was not improved, not storing the model.
+Train [4100] 	 Loss: 0.01020 	 time/batch: 0.157
+Train [4200] 	 Loss: 0.00993 	 time/batch: 0.153
+Valid [4200] 	 metrics until 24:   joint_angle: 4.231 	 total_time: 18.279
+Eval loss before was not improved, not storing the model.
+Train [4300] 	 Loss: 0.00750 	 time/batch: 0.155
+Train [4400] 	 Loss: 0.01270 	 time/batch: 0.155
+Valid [4400] 	 metrics until 24:   joint_angle: 4.097 	 total_time: 18.473
+Eval loss before was not improved, not storing the model.
+Train [4500] 	 Loss: 0.00886 	 time/batch: 0.153
+Train [4600] 	 Loss: 0.00737 	 time/batch: 0.156
+Valid [4600] 	 metrics until 24:   joint_angle: 4.083 	 total_time: 18.227
+Eval loss before was not improved, not storing the model.
+Train [4700] 	 Loss: 0.01238 	 time/batch: 0.154
+Train [4800] 	 Loss: 0.00793 	 time/batch: 0.152
+Valid [4800] 	 metrics until 24:   joint_angle: 4.049 	 total_time: 18.163
+Eval loss before was not improved, not storing the model.
+Train [4900] 	 Loss: 0.01027 	 time/batch: 0.157
+Train [5000] 	 Loss: 0.00948 	 time/batch: 0.152
+Valid [5000] 	 metrics until 24:   joint_angle: 4.038 	 total_time: 17.877
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [5100] 	 Loss: 0.00680 	 time/batch: 0.156
+Train [5200] 	 Loss: 0.01208 	 time/batch: 0.157
+Valid [5200] 	 metrics until 24:   joint_angle: 4.008 	 total_time: 18.264
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [5300] 	 Loss: 0.00775 	 time/batch: 0.150
+Train [5400] 	 Loss: 0.00823 	 time/batch: 0.158
+Valid [5400] 	 metrics until 24:   joint_angle: 4.164 	 total_time: 18.155
+Eval loss before was not improved, not storing the model.
+Train [5500] 	 Loss: 0.01082 	 time/batch: 0.154
+Train [5600] 	 Loss: 0.00720 	 time/batch: 0.152
+Valid [5600] 	 metrics until 24:   joint_angle: 3.983 	 total_time: 17.746
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [5700] 	 Loss: 0.01136 	 time/batch: 0.157
+Train [5800] 	 Loss: 0.00900 	 time/batch: 0.152
+Valid [5800] 	 metrics until 24:   joint_angle: 4.172 	 total_time: 17.883
+Eval loss before was not improved, not storing the model.
+Train [5900] 	 Loss: 0.00613 	 time/batch: 0.157
+Train [6000] 	 Loss: 0.01280 	 time/batch: 0.154
+Valid [6000] 	 metrics until 24:   joint_angle: 4.011 	 total_time: 18.376
+Eval loss before was not improved, not storing the model.
+Train [6100] 	 Loss: 0.00753 	 time/batch: 0.150
+Train [6200] 	 Loss: 0.00985 	 time/batch: 0.160
+Valid [6200] 	 metrics until 24:   joint_angle: 4.204 	 total_time: 17.908
+Eval loss before was not improved, not storing the model.
+Train [6300] 	 Loss: 0.00902 	 time/batch: 0.153
+Train [6400] 	 Loss: 0.00674 	 time/batch: 0.156
+Valid [6400] 	 metrics until 24:   joint_angle: 4.037 	 total_time: 18.278
+Eval loss before was not improved, not storing the model.
+Train [6500] 	 Loss: 0.16302 	 time/batch: 0.155
+Train [6600] 	 Loss: 0.00847 	 time/batch: 0.152
+Valid [6600] 	 metrics until 24:   joint_angle: 4.090 	 total_time: 17.833
+Eval loss before was not improved, not storing the model.
+Train [6700] 	 Loss: 0.00802 	 time/batch: 0.156
+Train [6800] 	 Loss: 0.01214 	 time/batch: 0.152
+Valid [6800] 	 metrics until 24:   joint_angle: 3.999 	 total_time: 18.294
+Eval loss before was not improved, not storing the model.
+Train [6900] 	 Loss: 0.00703 	 time/batch: 0.152
+Train [7000] 	 Loss: 0.01078 	 time/batch: 0.158
+Valid [7000] 	 metrics until 24:   joint_angle: 4.158 	 total_time: 17.831
+Eval loss before was not improved, not storing the model.
+Train [7100] 	 Loss: 0.00949 	 time/batch: 0.152
+Train [7200] 	 Loss: 0.00640 	 time/batch: 0.157
+Valid [7200] 	 metrics until 24:   joint_angle: 3.981 	 total_time: 18.387
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [7300] 	 Loss: 0.01338 	 time/batch: 0.154
+Train [7400] 	 Loss: 0.00729 	 time/batch: 0.152
+Valid [7400] 	 metrics until 24:   joint_angle: 3.999 	 total_time: 18.113
+Eval loss before was not improved, not storing the model.
+Train [7500] 	 Loss: 0.00967 	 time/batch: 0.159
+Train [7600] 	 Loss: 0.00968 	 time/batch: 0.152
+Valid [7600] 	 metrics until 24:   joint_angle: 3.934 	 total_time: 18.202
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [7700] 	 Loss: 0.00715 	 time/batch: 0.155
+Train [7800] 	 Loss: 0.01153 	 time/batch: 0.158
+Valid [7800] 	 metrics until 24:   joint_angle: 4.084 	 total_time: 17.780
+Eval loss before was not improved, not storing the model.
+Train [7900] 	 Loss: 0.00906 	 time/batch: 0.152
+Train [8000] 	 Loss: 0.00618 	 time/batch: 0.158
+Valid [8000] 	 metrics until 24:   joint_angle: 3.916 	 total_time: 18.093
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [8100] 	 Loss: 0.01272 	 time/batch: 0.155
+Train [8200] 	 Loss: 0.00701 	 time/batch: 0.149
+Valid [8200] 	 metrics until 24:   joint_angle: 4.118 	 total_time: 17.797
+Eval loss before was not improved, not storing the model.
+Train [8300] 	 Loss: 0.01012 	 time/batch: 0.159
+Train [8400] 	 Loss: 0.00869 	 time/batch: 0.153
+Valid [8400] 	 metrics until 24:   joint_angle: 3.946 	 total_time: 17.895
+Eval loss before was not improved, not storing the model.
+Train [8500] 	 Loss: 0.00607 	 time/batch: 0.154
+Train [8600] 	 Loss: 0.01237 	 time/batch: 0.157
+Valid [8600] 	 metrics until 24:   joint_angle: 3.946 	 total_time: 17.701
+Eval loss before was not improved, not storing the model.
+Train [8700] 	 Loss: 0.00752 	 time/batch: 0.153
+Train [8800] 	 Loss: 0.00853 	 time/batch: 0.159
+Valid [8800] 	 metrics until 24:   joint_angle: 4.045 	 total_time: 18.087
+Eval loss before was not improved, not storing the model.
+Train [8900] 	 Loss: 0.00946 	 time/batch: 0.152
+Train [9000] 	 Loss: 0.00681 	 time/batch: 0.153
+Valid [9000] 	 metrics until 24:   joint_angle: 4.003 	 total_time: 17.739
+Eval loss before was not improved, not storing the model.
+Train [9100] 	 Loss: 0.30950 	 time/batch: 0.157
+Train [9200] 	 Loss: 0.01513 	 time/batch: 0.151
+Valid [9200] 	 metrics until 24:   joint_angle: 3.976 	 total_time: 18.794
+Eval loss before was not improved, not storing the model.
+Train [9300] 	 Loss: 0.00650 	 time/batch: 0.156
+Train [9400] 	 Loss: 0.01773 	 time/batch: 0.155
+Valid [9400] 	 metrics until 24:   joint_angle: 4.170 	 total_time: 17.971
+Eval loss before was not improved, not storing the model.
+Train [9500] 	 Loss: 0.00856 	 time/batch: 0.149
+Train [9600] 	 Loss: 0.00972 	 time/batch: 0.159
+Valid [9600] 	 metrics until 24:   joint_angle: 4.044 	 total_time: 18.242
+Eval loss before was not improved, not storing the model.
+Train [9700] 	 Loss: 0.01040 	 time/batch: 0.153
+Train [9800] 	 Loss: 0.00668 	 time/batch: 0.155
+Valid [9800] 	 metrics until 24:   joint_angle: 3.940 	 total_time: 18.245
+Eval loss before was not improved, not storing the model.
+Train [9900] 	 Loss: 0.01217 	 time/batch: 0.157
+Train [10000] 	 Loss: 0.00775 	 time/batch: 0.151
+Valid [10000] 	 metrics until 24:   joint_angle: 3.985 	 total_time: 17.864
+Eval loss before was not improved, not storing the model.
+Train [10100] 	 Loss: 0.00691 	 time/batch: 0.159
+Train [10200] 	 Loss: 0.01205 	 time/batch: 0.156
+Valid [10200] 	 metrics until 24:   joint_angle: 3.947 	 total_time: 18.008
+Eval loss before was not improved, not storing the model.
+Train [10300] 	 Loss: 0.00690 	 time/batch: 0.151
+Train [10400] 	 Loss: 0.01074 	 time/batch: 0.159
+Valid [10400] 	 metrics until 24:   joint_angle: 4.027 	 total_time: 17.689
+Eval loss before was not improved, not storing the model.
+Train [10500] 	 Loss: 0.00864 	 time/batch: 0.153
+Train [10600] 	 Loss: 0.00654 	 time/batch: 0.156
+Valid [10600] 	 metrics until 24:   joint_angle: 3.912 	 total_time: 18.240
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [10700] 	 Loss: 0.01193 	 time/batch: 0.155
+Train [10800] 	 Loss: 0.00751 	 time/batch: 0.150
+Valid [10800] 	 metrics until 24:   joint_angle: 3.993 	 total_time: 18.324
+Eval loss before was not improved, not storing the model.
+Train [10900] 	 Loss: 0.00836 	 time/batch: 0.158
+Train [11000] 	 Loss: 0.01049 	 time/batch: 0.153
+Valid [11000] 	 metrics until 24:   joint_angle: 3.935 	 total_time: 17.948
+Eval loss before was not improved, not storing the model.
+Train [11100] 	 Loss: 0.00658 	 time/batch: 0.154
+Train [11200] 	 Loss: 0.01084 	 time/batch: 0.158
+Valid [11200] 	 metrics until 24:   joint_angle: 4.081 	 total_time: 18.145
+Eval loss before was not improved, not storing the model.
+Train [11300] 	 Loss: 0.00885 	 time/batch: 0.152
+Train [11400] 	 Loss: 0.00618 	 time/batch: 0.157
+Valid [11400] 	 metrics until 24:   joint_angle: 3.986 	 total_time: 17.687
+Eval loss before was not improved, not storing the model.
+Train [11500] 	 Loss: 0.01212 	 time/batch: 0.157
+Train [11600] 	 Loss: 0.00744 	 time/batch: 0.148
+Valid [11600] 	 metrics until 24:   joint_angle: 3.969 	 total_time: 17.693
+Eval loss before was not improved, not storing the model.
+Train [11700] 	 Loss: 0.00950 	 time/batch: 0.159
+Train [11800] 	 Loss: 0.01033 	 time/batch: 0.153
+Valid [11800] 	 metrics until 24:   joint_angle: 4.014 	 total_time: 18.044
+Eval loss before was not improved, not storing the model.
+Train [11900] 	 Loss: 0.00615 	 time/batch: 0.156
+Train [12000] 	 Loss: 0.01167 	 time/batch: 0.157
+Valid [12000] 	 metrics until 24:   joint_angle: 4.061 	 total_time: 18.094
+Eval loss before was not improved, not storing the model.
+Train [12100] 	 Loss: 0.00729 	 time/batch: 0.152
+Train [12200] 	 Loss: 0.00731 	 time/batch: 0.159
+Valid [12200] 	 metrics until 24:   joint_angle: 4.016 	 total_time: 17.668
+Eval loss before was not improved, not storing the model.
+Train [12300] 	 Loss: 0.01081 	 time/batch: 0.155
+Train [12400] 	 Loss: 0.00693 	 time/batch: 0.151
+Valid [12400] 	 metrics until 24:   joint_angle: 4.009 	 total_time: 18.074
+Eval loss before was not improved, not storing the model.
+Train [12500] 	 Loss: 0.01045 	 time/batch: 0.158
+Train [12600] 	 Loss: 0.00840 	 time/batch: 0.151
+Valid [12600] 	 metrics until 24:   joint_angle: 3.869 	 total_time: 17.837
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [12700] 	 Loss: 0.00614 	 time/batch: 0.156
+Train [12800] 	 Loss: 0.01230 	 time/batch: 0.157
+Valid [12800] 	 metrics until 24:   joint_angle: 3.977 	 total_time: 18.091
+Eval loss before was not improved, not storing the model.
+Train [12900] 	 Loss: 0.00720 	 time/batch: 0.150
+Train [13000] 	 Loss: 0.00941 	 time/batch: 0.158
+Valid [13000] 	 metrics until 24:   joint_angle: 4.077 	 total_time: 17.808
+Eval loss before was not improved, not storing the model.
+Train [13100] 	 Loss: 0.00971 	 time/batch: 0.154
+Train [13200] 	 Loss: 0.00640 	 time/batch: 0.155
+Valid [13200] 	 metrics until 24:   joint_angle: 3.988 	 total_time: 17.936
+Eval loss before was not improved, not storing the model.
+Train [13300] 	 Loss: 0.01073 	 time/batch: 0.156
+Train [13400] 	 Loss: 0.00801 	 time/batch: 0.151
+Valid [13400] 	 metrics until 24:   joint_angle: 4.079 	 total_time: 17.837
+Eval loss before was not improved, not storing the model.
+Train [13500] 	 Loss: 0.00636 	 time/batch: 0.158
+Train [13600] 	 Loss: 0.01149 	 time/batch: 0.156
+Valid [13600] 	 metrics until 24:   joint_angle: 3.955 	 total_time: 17.611
+Eval loss before was not improved, not storing the model.
+Train [13700] 	 Loss: 0.00680 	 time/batch: 0.152
+Train [13800] 	 Loss: 0.01003 	 time/batch: 0.159
+Valid [13800] 	 metrics until 24:   joint_angle: 4.190 	 total_time: 18.160
+Eval loss before was not improved, not storing the model.
+Train [13900] 	 Loss: 0.00886 	 time/batch: 0.152
+Train [14000] 	 Loss: 0.00620 	 time/batch: 0.155
+Valid [14000] 	 metrics until 24:   joint_angle: 3.889 	 total_time: 18.277
+Eval loss before was not improved, not storing the model.
+Train [14100] 	 Loss: 0.01191 	 time/batch: 0.157
+Train [14200] 	 Loss: 0.00702 	 time/batch: 0.151
+Valid [14200] 	 metrics until 24:   joint_angle: 3.986 	 total_time: 18.034
+Eval loss before was not improved, not storing the model.
+Train [14300] 	 Loss: 0.00756 	 time/batch: 0.159
+Train [14400] 	 Loss: 0.01106 	 time/batch: 0.154
+Valid [14400] 	 metrics until 24:   joint_angle: 3.916 	 total_time: 17.703
+Eval loss before was not improved, not storing the model.
+Train [14500] 	 Loss: 0.00667 	 time/batch: 0.153
+Train [14600] 	 Loss: 0.01033 	 time/batch: 0.157
+Valid [14600] 	 metrics until 24:   joint_angle: 4.096 	 total_time: 17.897
+Eval loss before was not improved, not storing the model.
+Train [14700] 	 Loss: 0.00803 	 time/batch: 0.152
+Train [14800] 	 Loss: 0.00606 	 time/batch: 0.158
+Valid [14800] 	 metrics until 24:   joint_angle: 3.931 	 total_time: 18.304
+Eval loss before was not improved, not storing the model.
+Train [14900] 	 Loss: 0.01206 	 time/batch: 0.158
+Train [15000] 	 Loss: 0.00700 	 time/batch: 0.152
+Valid [15000] 	 metrics until 24:   joint_angle: 3.926 	 total_time: 18.066
+Eval loss before was not improved, not storing the model.
+Train [15100] 	 Loss: 0.00889 	 time/batch: 0.159
+Train [15200] 	 Loss: 0.00940 	 time/batch: 0.151
+Valid [15200] 	 metrics until 24:   joint_angle: 3.957 	 total_time: 17.885
+Eval loss before was not improved, not storing the model.
+Train [15300] 	 Loss: 0.00642 	 time/batch: 0.154
+Train [15400] 	 Loss: 0.01178 	 time/batch: 0.156
+Valid [15400] 	 metrics until 24:   joint_angle: 4.210 	 total_time: 18.140
+Eval loss before was not improved, not storing the model.
+Train [15500] 	 Loss: 0.00802 	 time/batch: 0.151
+Train [15600] 	 Loss: 0.00721 	 time/batch: 0.157
+Valid [15600] 	 metrics until 24:   joint_angle: 3.976 	 total_time: 17.795
+Eval loss before was not improved, not storing the model.
+Train [15700] 	 Loss: 0.01084 	 time/batch: 0.156
+Train [15800] 	 Loss: 0.00659 	 time/batch: 0.151
+Valid [15800] 	 metrics until 24:   joint_angle: 3.995 	 total_time: 17.786
+Eval loss before was not improved, not storing the model.
+Train [15900] 	 Loss: 0.01000 	 time/batch: 0.159
+Train [16000] 	 Loss: 0.00890 	 time/batch: 0.152
+Valid [16000] 	 metrics until 24:   joint_angle: 3.944 	 total_time: 17.808
+Eval loss before was not improved, not storing the model.
+Train [16100] 	 Loss: 0.00577 	 time/batch: 0.155
+Train [16200] 	 Loss: 0.01151 	 time/batch: 0.157
+Valid [16200] 	 metrics until 24:   joint_angle: 4.017 	 total_time: 18.033
+Eval loss before was not improved, not storing the model.
+Train [16300] 	 Loss: 0.00739 	 time/batch: 0.150
+Train [16400] 	 Loss: 0.00844 	 time/batch: 0.159
+Valid [16400] 	 metrics until 24:   joint_angle: 4.099 	 total_time: 17.844
+Eval loss before was not improved, not storing the model.
+Train [16500] 	 Loss: 0.00920 	 time/batch: 0.154
+Train [16600] 	 Loss: 0.00623 	 time/batch: 0.154
+Valid [16600] 	 metrics until 24:   joint_angle: 3.957 	 total_time: 18.197
+Eval loss before was not improved, not storing the model.
+Train [16700] 	 Loss: 0.01019 	 time/batch: 0.158
+Train [16800] 	 Loss: 0.00826 	 time/batch: 0.151
+Valid [16800] 	 metrics until 24:   joint_angle: 3.966 	 total_time: 17.588
+Eval loss before was not improved, not storing the model.
+Train [16900] 	 Loss: 0.00573 	 time/batch: 0.157
+Train [17000] 	 Loss: 0.01067 	 time/batch: 0.159
+Valid [17000] 	 metrics until 24:   joint_angle: 3.923 	 total_time: 17.645
+Eval loss before was not improved, not storing the model.
+Train [17100] 	 Loss: 0.00680 	 time/batch: 0.150
+Train [17200] 	 Loss: 0.00865 	 time/batch: 0.159
+Valid [17200] 	 metrics until 24:   joint_angle: 3.989 	 total_time: 17.983
+Eval loss before was not improved, not storing the model.
+Train [17300] 	 Loss: 0.00941 	 time/batch: 0.153
+Train [17400] 	 Loss: 0.00586 	 time/batch: 0.157
+Valid [17400] 	 metrics until 24:   joint_angle: 3.889 	 total_time: 18.309
+Eval loss before was not improved, not storing the model.
+Train [17500] 	 Loss: 0.01087 	 time/batch: 0.157
+Train [17600] 	 Loss: 0.00709 	 time/batch: 0.151
+Valid [17600] 	 metrics until 24:   joint_angle: 4.022 	 total_time: 17.845
+Eval loss before was not improved, not storing the model.
+Train [17700] 	 Loss: 0.00628 	 time/batch: 0.159
+Train [17800] 	 Loss: 0.01102 	 time/batch: 0.155
+Valid [17800] 	 metrics until 24:   joint_angle: 3.977 	 total_time: 17.820
+Eval loss before was not improved, not storing the model.
+Train [17900] 	 Loss: 0.00663 	 time/batch: 0.151
+Train [18000] 	 Loss: 0.00952 	 time/batch: 0.157
+Valid [18000] 	 metrics until 24:   joint_angle: 4.178 	 total_time: 17.947
+Eval loss before was not improved, not storing the model.
+Train [18100] 	 Loss: 0.00856 	 time/batch: 0.154
+Train [18200] 	 Loss: 0.00557 	 time/batch: 0.156
+Valid [18200] 	 metrics until 24:   joint_angle: 3.959 	 total_time: 18.114
+Eval loss before was not improved, not storing the model.
+Train [18300] 	 Loss: 0.01124 	 time/batch: 0.156
+Train [18400] 	 Loss: 0.00670 	 time/batch: 0.151
+Valid [18400] 	 metrics until 24:   joint_angle: 4.009 	 total_time: 17.734
+Eval loss before was not improved, not storing the model.
+Train [18500] 	 Loss: 0.00837 	 time/batch: 0.158
+Train [18600] 	 Loss: 0.00898 	 time/batch: 0.152
+Valid [18600] 	 metrics until 24:   joint_angle: 3.903 	 total_time: 18.169
+Eval loss before was not improved, not storing the model.
+Train [18700] 	 Loss: 0.00609 	 time/batch: 0.154
+Train [18800] 	 Loss: 0.00987 	 time/batch: 0.158
+Valid [18800] 	 metrics until 24:   joint_angle: 3.941 	 total_time: 18.090
+Eval loss before was not improved, not storing the model.
+Train [18900] 	 Loss: 0.00734 	 time/batch: 0.152
+Train [19000] 	 Loss: 0.00572 	 time/batch: 0.157
+Valid [19000] 	 metrics until 24:   joint_angle: 3.854 	 total_time: 18.213
+Saving the model to experiments/28_19-12-seq2seq-seqseq-b16-1024@lstm-in120_out24
+Train [19100] 	 Loss: 0.01118 	 time/batch: 0.157
+Train [19200] 	 Loss: 0.00670 	 time/batch: 0.148
+Valid [19200] 	 metrics until 24:   joint_angle: 3.919 	 total_time: 17.778
+Eval loss before was not improved, not storing the model.
+Train [19300] 	 Loss: 0.00909 	 time/batch: 0.159
+Train [19400] 	 Loss: 0.00907 	 time/batch: 0.155
+Valid [19400] 	 metrics until 24:   joint_angle: 4.020 	 total_time: 18.098
+Eval loss before was not improved, not storing the model.
+Train [19500] 	 Loss: 0.00565 	 time/batch: 0.155
+Train [19600] 	 Loss: 0.01156 	 time/batch: 0.158
+Valid [19600] 	 metrics until 24:   joint_angle: 4.152 	 total_time: 17.757
+Eval loss before was not improved, not storing the model.
+Train [19700] 	 Loss: 0.00736 	 time/batch: 0.151
+Train [19800] 	 Loss: 0.00741 	 time/batch: 0.160
+Valid [19800] 	 metrics until 24:   joint_angle: 4.190 	 total_time: 17.934
+Eval loss before was not improved, not storing the model.
+Train [19900] 	 Loss: 0.00971 	 time/batch: 0.154
+Train [20000] 	 Loss: 0.00623 	 time/batch: 0.151
+Valid [20000] 	 metrics until 24:   joint_angle: 4.281 	 total_time: 18.175
+Eval loss before was not improved, not storing the model.
+Train [20100] 	 Loss: 0.00949 	 time/batch: 0.159
+Train [20200] 	 Loss: 0.00777 	 time/batch: 0.149
+Valid [20200] 	 metrics until 24:   joint_angle: 4.194 	 total_time: 18.045
+Eval loss before was not improved, not storing the model.
+Train [20300] 	 Loss: 0.00581 	 time/batch: 0.157
+Train [20400] 	 Loss: 0.01075 	 time/batch: 0.157
+Valid [20400] 	 metrics until 24:   joint_angle: 3.893 	 total_time: 17.744
+Eval loss before was not improved, not storing the model.
+Train [20500] 	 Loss: 0.00624 	 time/batch: 0.151
+Train [20600] 	 Loss: 0.00739 	 time/batch: 0.158
+Valid [20600] 	 metrics until 24:   joint_angle: 3.961 	 total_time: 18.248
+Eval loss before was not improved, not storing the model.
+Train [20700] 	 Loss: 0.00945 	 time/batch: 0.151
+Train [20800] 	 Loss: 0.00592 	 time/batch: 0.154
+Valid [20800] 	 metrics until 24:   joint_angle: 3.999 	 total_time: 17.709
+Eval loss before was not improved, not storing the model.
+Train [20900] 	 Loss: 0.01101 	 time/batch: 0.159
+Train [21000] 	 Loss: 0.02015 	 time/batch: 0.152
+Valid [21000] 	 metrics until 24:   joint_angle: 4.351 	 total_time: 18.396
+Eval loss before was not improved, not storing the model.
+Train [21100] 	 Loss: 0.00737 	 time/batch: 0.159
+Train [21200] 	 Loss: 0.01242 	 time/batch: 0.155
+Valid [21200] 	 metrics until 24:   joint_angle: 4.081 	 total_time: 17.821
+Eval loss before was not improved, not storing the model.
+Train [21300] 	 Loss: 0.00690 	 time/batch: 0.149
+Train [21400] 	 Loss: 0.01024 	 time/batch: 0.159
+Valid [21400] 	 metrics until 24:   joint_angle: 4.070 	 total_time: 17.958
+Eval loss before was not improved, not storing the model.
+Train [21500] 	 Loss: 0.00839 	 time/batch: 0.153
+Train [21600] 	 Loss: 0.00592 	 time/batch: 0.157
+Valid [21600] 	 metrics until 24:   joint_angle: 3.942 	 total_time: 18.186
+Eval loss before was not improved, not storing the model.
+Train [21700] 	 Loss: 0.01214 	 time/batch: 0.156
+Train [21800] 	 Loss: 0.00753 	 time/batch: 0.151
+Valid [21800] 	 metrics until 24:   joint_angle: 4.059 	 total_time: 18.385
+Eval loss before was not improved, not storing the model.
+Train [21900] 	 Loss: 0.00766 	 time/batch: 0.160
+Train [22000] 	 Loss: 0.01052 	 time/batch: 0.154
+Valid [22000] 	 metrics until 24:   joint_angle: 3.975 	 total_time: 18.027
+Eval loss before was not improved, not storing the model.
+Train [22100] 	 Loss: 0.00629 	 time/batch: 0.154
+Train [22200] 	 Loss: 0.01077 	 time/batch: 0.157
+Valid [22200] 	 metrics until 24:   joint_angle: 4.154 	 total_time: 18.323
+Eval loss before was not improved, not storing the model.
+Train [22300] 	 Loss: 0.00869 	 time/batch: 0.153
+Train [22400] 	 Loss: 0.00598 	 time/batch: 0.156
+Valid [22400] 	 metrics until 24:   joint_angle: 3.935 	 total_time: 17.942
+Eval loss before was not improved, not storing the model.
+Train [22500] 	 Loss: 0.01180 	 time/batch: 0.156
+Train [22600] 	 Loss: 0.00658 	 time/batch: 0.149
+Valid [22600] 	 metrics until 24:   joint_angle: 4.037 	 total_time: 18.137
+Eval loss before was not improved, not storing the model.
+Train [22700] 	 Loss: 1.95412 	 time/batch: 0.158
+Train [22800] 	 Loss: 0.00990 	 time/batch: 0.153
+Valid [22800] 	 metrics until 24:   joint_angle: 4.060 	 total_time: 17.970
+Eval loss before was not improved, not storing the model.
+Train [22900] 	 Loss: 0.00614 	 time/batch: 0.156
+Train [23000] 	 Loss: 0.01164 	 time/batch: 0.157
+Valid [23000] 	 metrics until 24:   joint_angle: 4.018 	 total_time: 17.828
+Eval loss before was not improved, not storing the model.
+Train [23100] 	 Loss: 0.00757 	 time/batch: 0.151
+Train [23200] 	 Loss: 0.00671 	 time/batch: 0.159
+Valid [23200] 	 metrics until 24:   joint_angle: 3.926 	 total_time: 18.345
+Eval loss before was not improved, not storing the model.
+Train [23300] 	 Loss: 0.01121 	 time/batch: 0.154
+Train [23400] 	 Loss: 0.00631 	 time/batch: 0.150
+Valid [23400] 	 metrics until 24:   joint_angle: 3.935 	 total_time: 18.085
+Eval loss before was not improved, not storing the model.
+Train [23500] 	 Loss: 0.00996 	 time/batch: 0.161
+Train [23600] 	 Loss: 0.00889 	 time/batch: 0.153
+Valid [23600] 	 metrics until 24:   joint_angle: 3.961 	 total_time: 18.013
+Eval loss before was not improved, not storing the model.
+Train [23700] 	 Loss: 0.00561 	 time/batch: 0.157
+Train [23800] 	 Loss: 0.01156 	 time/batch: 0.156
+Valid [23800] 	 metrics until 24:   joint_angle: 4.020 	 total_time: 18.159
+Eval loss before was not improved, not storing the model.
+Train [23900] 	 Loss: 0.00704 	 time/batch: 0.150
+Train [24000] 	 Loss: 0.00783 	 time/batch: 0.158
+Valid [24000] 	 metrics until 24:   joint_angle: 3.968 	 total_time: 17.950
+Eval loss before was not improved, not storing the model.
+Train [24100] 	 Loss: 0.00968 	 time/batch: 0.153
+Train [24200] 	 Loss: 0.00608 	 time/batch: 0.152
+Valid [24200] 	 metrics until 24:   joint_angle: 3.998 	 total_time: 18.176
+Eval loss before was not improved, not storing the model.
+Train [24300] 	 Loss: 0.01060 	 time/batch: 0.159
+Train [24400] 	 Loss: 0.00751 	 time/batch: 0.151
+Valid [24400] 	 metrics until 24:   joint_angle: 4.090 	 total_time: 18.129
+Eval loss before was not improved, not storing the model.
+Train [24500] 	 Loss: 0.00576 	 time/batch: 0.158
+Train [24600] 	 Loss: 1.61607 	 time/batch: 0.156
+Valid [24600] 	 metrics until 24:   joint_angle: 50.574 	 total_time: 20.017
+Eval loss before was not improved, not storing the model.
+Train [24700] 	 Loss: 0.68210 	 time/batch: 0.151
+Train [24800] 	 Loss: 0.06984 	 time/batch: 0.160
+Valid [24800] 	 metrics until 24:   joint_angle: 11.916 	 total_time: 17.716
+Eval loss before was not improved, not storing the model.
+Train [24900] 	 Loss: 0.03691 	 time/batch: 0.153
+Train [25000] 	 Loss: 0.01952 	 time/batch: 0.156
+Valid [25000] 	 metrics until 24:   joint_angle: 8.400 	 total_time: 17.708
+Eval loss before was not improved, not storing the model.
+Train [25100] 	 Loss: 0.02295 	 time/batch: 0.157
+Train [25200] 	 Loss: 0.01625 	 time/batch: 0.153
+Valid [25200] 	 metrics until 24:   joint_angle: 6.680 	 total_time: 17.798
+Eval loss before was not improved, not storing the model.
+Train [25300] 	 Loss: 0.01250 	 time/batch: 0.161
+Train [25400] 	 Loss: 0.01788 	 time/batch: 0.155
+Valid [25400] 	 metrics until 24:   joint_angle: 5.487 	 total_time: 18.218
+Eval loss before was not improved, not storing the model.
+Train [25500] 	 Loss: 0.00984 	 time/batch: 0.152
+Train [25600] 	 Loss: 0.01217 	 time/batch: 0.158
+Valid [25600] 	 metrics until 24:   joint_angle: 4.943 	 total_time: 17.683
+Eval loss before was not improved, not storing the model.
+Train [25700] 	 Loss: 0.01167 	 time/batch: 0.152
+Train [25800] 	 Loss: 0.00833 	 time/batch: 0.156
+Valid [25800] 	 metrics until 24:   joint_angle: 4.679 	 total_time: 18.401
+Eval loss before was not improved, not storing the model.
+Train [25900] 	 Loss: 0.01365 	 time/batch: 0.158
+Train [26000] 	 Loss: 0.00936 	 time/batch: 0.150
+Valid [26000] 	 metrics until 24:   joint_angle: 4.645 	 total_time: 17.830
+Eval loss before was not improved, not storing the model.
+Train [26100] 	 Loss: 0.01020 	 time/batch: 0.160
+Train [26200] 	 Loss: 0.01094 	 time/batch: 0.154
+Valid [26200] 	 metrics until 24:   joint_angle: 4.434 	 total_time: 18.157
+Eval loss before was not improved, not storing the model.
+End of Training.
+Evaluating validation set ...
+Loading model checkpoint checkpoint-19000
+Valid [26200] 	 metrics until 24:   joint_angle: 3.854 	 total_time: 18.215
+Training Finished.
