@@ -38,7 +38,7 @@ class Dataset(object):
 
         # A scalar mean and standard deviation per degree of freedom computed over the entire training set
         self.mean_channel = self.meta_data['mean_channel']  # (135, )
-        self.var_channel = self.meta_data['var_channel']  # (135, )
+        self.var_channel = np.sqrt(self.meta_data['var_channel'])  # (135, )
 
         # Do some preprocessing.
         self.tf_data_transformations()
