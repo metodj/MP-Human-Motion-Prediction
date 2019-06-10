@@ -122,6 +122,8 @@ def create_model(session):
                                            to_angles=config["to_angles"],
                                            standardization=config["standardization"])
         train_pl = train_data.get_tf_samples()
+        means = train_data.mean_channel
+        stds = train_data.var_channel
 
         print("train_pl\t", str(type(train_pl)))
         print(train_pl.keys())
@@ -194,7 +196,7 @@ def create_model(session):
 
     models = [train_model, valid_model]
     data = [train_data, valid_data]
-    return models, data, saver, global_step, experiment_dir
+    return models, data, saver, global_step, experiment_dir, means, stds
 
 
 def load_latest_checkpoint(sess, saver, experiment_dir):
@@ -370,7 +372,7 @@ def train():
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, device_count=device_count)) as sess:
 
         # Create the models and load the data.
-        models, data, saver, global_step, experiment_dir = create_model(sess)
+        models, data, saver, global_step, experiment_dir, means, stds = create_model(sess)
         train_model, valid_model = models
         train_data, valid_data = data
 
@@ -412,6 +414,12 @@ def train():
                 while True:
                     # get the predictions and ground truth values
                     predictions, targets, seed_sequence, data_id = _eval_model.sampled_step(sess)  # (16, 24, 135)
+
+                    if ARGS.stand:
+                        targets = (targets * stds) + means
+                        predictions = (predictions * stds) + means
+                        seed_sequence = (seed_sequence * stds) + means
+
 
                     _metrics_engine.compute_and_aggregate(predictions, targets)
 

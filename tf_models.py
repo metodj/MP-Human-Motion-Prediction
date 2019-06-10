@@ -96,9 +96,9 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
-        if self.standardization:
-            predictions_pose = tf.math.add(tf.math.multiply(predictions_pose, self.vars), self.means)
-            targets_pose = tf.math.add(tf.math.multiply(targets_pose, self.vars), self.means)
+        # if self.standardization:
+        #     predictions_pose = tf.math.add(tf.math.multiply(predictions_pose, self.vars), self.means)
+        #     targets_pose = tf.math.add(tf.math.multiply(targets_pose, self.vars), self.means)
 
         with tf.name_scope("loss"):
             if not self.to_angles:
@@ -363,9 +363,9 @@ class DummyModel(BaseModel):
 
             predictions = angle_axis_to_rot_mats_cv2(predictions)  # (16, 24, 135)
 
-        if self.standardization:
-            predictions = (predictions * self.vars) + self.means
-            targets = (targets * self.vars) + self.means
+        # if self.standardization:
+        #     predictions = (predictions * self.vars) + self.means
+        #     targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
@@ -538,9 +538,9 @@ class ZeroVelocityModel(BaseModel):
 
             predictions = angle_axis_to_rot_mats_cv2(predictions)
 
-        if self.standardization:
-            predictions = (predictions * self.vars) + self.means
-            targets = (targets * self.vars) + self.means
+        # if self.standardization:
+        #     predictions = (predictions * self.vars) + self.means
+        #     targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
@@ -760,10 +760,10 @@ class Seq2seq(BaseModel):
             else:
                 self.cell_decoder = cell
 
-            if self.dropout:
+            if self.dropout and not self.reuse: # not self.reuse is there so that we apply dropout only during training
                 self.cell = tf.nn.rnn_cell.DropoutWrapper(self.cell, input_keep_prob=self.dropout,
                                                           output_keep_prob=self.dropout, state_keep_prob=self.dropout)
-                self.cell_decoder  = tf.nn.rnn_cell.DropoutWrapper(self.cell_decoder , input_keep_prob=self.dropout,
+                self.cell_decoder = tf.nn.rnn_cell.DropoutWrapper(self.cell_decoder , input_keep_prob=self.dropout,
                                                           output_keep_prob=self.dropout, state_keep_prob=self.dropout)
 
             self.cell_fidelity = cell_fidelity
@@ -1122,9 +1122,9 @@ class Seq2seq(BaseModel):
             predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
             predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
 
-        if self.standardization:
-            predictions = (predictions * self.vars) + self.means
-            targets = (targets * self.vars) + self.means
+        # if self.standardization:
+        #     predictions = (predictions * self.vars) + self.means
+        #     targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
