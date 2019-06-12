@@ -96,6 +96,12 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
+        # if self.standardization:
+        #     predictions_pose = tf.math.add(tf.math.multiply(predictions_pose, tf.dtypes.cast(tf.math.sqrt(self.vars), \
+        #                                                                              dtype=tf.float32)), self.means)
+        #     targets_pose = tf.math.add(tf.math.multiply(targets_pose, tf.dtypes.cast(tf.math.sqrt(self.vars),\
+        #                                                 dtype=tf.float32)), self.means)
+
         with tf.name_scope("loss"):
             if not self.to_angles:
                 if self.loss == "geo":
