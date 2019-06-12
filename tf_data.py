@@ -38,7 +38,7 @@ class Dataset(object):
 
         # A scalar mean and standard deviation per degree of freedom computed over the entire training set
         self.mean_channel = self.meta_data['mean_channel']  # (135, )
-        self.var_channel = np.sqrt(self.meta_data['var_channel'])  # (135, )
+        self.var_channel = self.meta_data['var_channel']  # (135, )
 
         # Do some preprocessing.
         self.tf_data_transformations()
@@ -167,7 +167,7 @@ class TFRecordMotionDataset(Dataset):
         # Speedup.
         self.tf_data = self.tf_data.prefetch(2)
         # UNCOMMENT when running on Leonhard
-        self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
+        # self.tf_data = self.tf_data.apply(tf.data.experimental.prefetch_to_device('/device:GPU:0'))
 
     def _pp_filter(self, sample):
         """Filter out samples that are smaller then the required window size."""
@@ -282,17 +282,7 @@ class TFRecordMotionDataset(Dataset):
             The same dictionary, but pre-processed.
         """
         def _standardize(p):
-            # mean_ = mean[:, np.newaxis]
-            # print(mean_.shape)
-            # mean_ = np.repeat(mean_, p.shape[0], axis=1).transpose()
-            # var_ = var[:, np.newaxis]
-            # var_ = np.repeat(var_, p.shape[0], axis=1).transpose()
-            # p2 = (p-mean)/var
-            # p = (p-mean_) / var_
-            # print(np.all(p==p2))
-
-            # above can be simplified due to numpy broadcasting
-            p = (p - mean)/var
+            p = (p - mean)/np.sqrt(var)
             p = p.astype(np.float32)
             return p
 

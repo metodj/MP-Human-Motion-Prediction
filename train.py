@@ -74,7 +74,7 @@ parser.add_argument("--dropout", type=float, default=None, help="Dropout rate.")
 
 # data representation
 parser.add_argument("--to_angles", action="store_true", help="use angle representation")
-parser.add_argument("--stand", action="store_true", help="standardize exponential maps")
+parser.add_argument("--stand", action="store_true", help="standardization")
 
 ARGS = parser.parse_args()
 # EXPERIMENT_TIMESTAMP = str(int(time.time()))
@@ -123,10 +123,10 @@ def create_model(session):
                                            standardization=config["standardization"])
         train_pl = train_data.get_tf_samples()
         means = train_data.mean_channel
-        stds = train_data.var_channel
+        vars = train_data.var_channel
 
-        print("train_pl\t", str(type(train_pl)))
-        print(train_pl.keys())
+        # print("train_pl\t", str(type(train_pl)))
+        # print(train_pl.keys())
 
     # Load validation data.
     with tf.name_scope("validation_data"):
@@ -140,8 +140,8 @@ def create_model(session):
                                            to_angles=config["to_angles"],
                                            standardization=config["standardization"])
         valid_pl = valid_data.get_tf_samples()
-        print("valid_pl\t", str(type(valid_pl)))
-        print(valid_pl.keys())
+        # print("valid_pl\t", str(type(valid_pl)))
+        # print(valid_pl.keys())
 
     # Create the training model.
     with tf.name_scope(C.TRAIN):
@@ -196,7 +196,7 @@ def create_model(session):
 
     models = [train_model, valid_model]
     data = [train_data, valid_data]
-    return models, data, saver, global_step, experiment_dir, means, stds
+    return models, data, saver, global_step, experiment_dir, means, vars
 
 
 def load_latest_checkpoint(sess, saver, experiment_dir):
@@ -372,7 +372,7 @@ def train():
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, device_count=device_count)) as sess:
 
         # Create the models and load the data.
-        models, data, saver, global_step, experiment_dir, means, stds = create_model(sess)
+        models, data, saver, global_step, experiment_dir, means, vars = create_model(sess)
         train_model, valid_model = models
         train_data, valid_data = data
 
@@ -416,10 +416,9 @@ def train():
                     predictions, targets, seed_sequence, data_id = _eval_model.sampled_step(sess)  # (16, 24, 135)
 
                     if ARGS.stand:
-                        targets = (targets * stds) + means
-                        predictions = (predictions * stds) + means
-                        seed_sequence = (seed_sequence * stds) + means
-
+                        targets = (targets) * np.sqrt(vars) + means
+                        predictions = (predictions) * np.sqrt(vars) + means
+                        seed_sequence = (seed_sequence) * np.sqrt(vars) + means
 
                     _metrics_engine.compute_and_aggregate(predictions, targets)
 
@@ -497,7 +496,7 @@ def train():
                         saver.save(sess, os.path.normpath(os.path.join(experiment_dir, 'checkpoint')), global_step=step-1)
                     eval_loss = eval_loss_
                 else:
-                    print('Eval loss before was not improved, not storing the model.')
+                    print('Eval loss was not improved during current epoch, not storing the model.')
             else:
                 print("Saving the model to {}".format(experiment_dir))
                 if not train_model.config["model_type"] == "zero_velocity":
