@@ -70,6 +70,7 @@ parser.add_argument("--weight_sharing", type=str, default="w/o", help="other opt
 parser.add_argument("--weight_sharing_rnn", action="store_true", help="Rnn weight sharing.")
 parser.add_argument("--epsilon", type=float, default="0.00000001", help="epsilon param for Adam optimizer")
 parser.add_argument("--dropout", type=float, default=None, help="Dropout rate.")
+parser.add_argument("--exp_decay", type=float, default=None, help="Decay rate.")
 
 
 # data representation
@@ -342,6 +343,7 @@ def get_seq2seq_config(args):
     config["weight_sharing_rnn"] = args.weight_sharing_rnn
     config['epsilon'] = args.epsilon
     config['dropout'] = args.dropout
+    config['exp_decay'] = args.exp_decay
 
     model_cls = models.Seq2seq
 

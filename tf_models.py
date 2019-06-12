@@ -602,6 +602,7 @@ class Seq2seq(BaseModel):
         self.weight_sharing = self.config["weight_sharing"]
         self.weight_sharing_rnn = self.config["weight_sharing_rnn"]
         self.epsilon = self.config['epsilon']
+        self.exp_decay = self.config['exp_decay']
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
@@ -888,6 +889,10 @@ class Seq2seq(BaseModel):
 
     def optimization_routines(self):
         """Add an optimizer."""
+        if self.exp_decay:
+            self.learning_rate = tf.train.exponential_decay(self.learning_rate, self.global_step, 500, \
+                                                            self.exp_decay, staircase=True)
+
         # Use a simple SGD optimizer.
         if self.optimizer == 'SGD':
             optimizer = tf.train.GradientDescentOptimizer(self.learning_rate)
@@ -1056,10 +1061,13 @@ class Seq2seq(BaseModel):
                                self.summary_update,
                                self.outputs,
                                self.parameter_update,
+                               self.learning_rate,
+                               self.global_step
                                ]
 
                 outputs = session.run(output_feed)
-                # print("loss", outputs[0])
+                # print("global_step", outputs[5])
+                # print("learning_rate", outputs[4])
                 return outputs[0], outputs[1], outputs[2]
             else:
                 # Update all
