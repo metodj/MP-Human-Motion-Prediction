@@ -96,10 +96,6 @@ class BaseModel(object):
             predictions_pose = self.outputs
             targets_pose = self.prediction_targets
 
-        # if self.standardization:
-        #     predictions_pose = tf.math.add(tf.math.multiply(predictions_pose, self.vars), self.means)
-        #     targets_pose = tf.math.add(tf.math.multiply(targets_pose, self.vars), self.means)
-
         with tf.name_scope("loss"):
             if not self.to_angles:
                 if self.loss == "geo":
@@ -603,6 +599,7 @@ class Seq2seq(BaseModel):
         self.weight_sharing_rnn = self.config["weight_sharing_rnn"]
         self.epsilon = self.config['epsilon']
         self.exp_decay = self.config['exp_decay']
+        self.bi = self.config['bi']
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
@@ -645,6 +642,9 @@ class Seq2seq(BaseModel):
         self.state_con_tar = None
         self.loss_continuity = None
         self.parameter_update_disc = None
+
+        self.inputs_hidden_encoder_reverse = None
+        self.inputs_encoder_reverse = None
 
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
@@ -714,6 +714,7 @@ class Seq2seq(BaseModel):
                     with tf.variable_scope("input_layer_shared", reuse=self.reuse):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
+
                         if self.dropout:
                             self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
                                                                            training=not self.reuse)
@@ -721,6 +722,7 @@ class Seq2seq(BaseModel):
         else:
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
+            self.inputs_hidden_encoder_reverse = self.inputs_encoder_reverse
 
     def build_cell(self):
         """Create recurrent cell."""
@@ -926,18 +928,47 @@ class Seq2seq(BaseModel):
 
         # Zero states
         self.initial_states = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
+        self.initial_states2 = self.cell.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
         self.initial_states_fidelity = self.cell_fidelity.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
         self.initial_states_continuity = self.cell_continuity.zero_state(batch_size=self.tf_batch_size, dtype=tf.float32)
 
         # RNN
-        with tf.variable_scope("rnn_encoder", reuse=self.reuse):
-            _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder,
-                                                  sequence_length=self.prediction_seq_len_encoder,
-                                                  initial_state=self.initial_states,
-                                                  dtype=tf.float32)
+        if not self.bi:
+            with tf.variable_scope("rnn_encoder", reuse=self.reuse):
+                _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder,
+                                                      sequence_length=self.prediction_seq_len_encoder,
+                                                      initial_state=self.initial_states,
+                                                      dtype=tf.float32)
+
+        else:
+            with tf.variable_scope("rnn_encoder", reuse=self.reuse):
+                _, (encoder_fw_state, encoder_bw_state)= tf.nn.bidirectional_dynamic_rnn(self.cell, self.cell, self.inputs_hidden_encoder,
+                                                      sequence_length=self.prediction_seq_len_encoder,
+                                                      initial_state_fw=self.initial_states,
+                                                      initial_state_bw=self.initial_states2,
+                                                      dtype=tf.float32)
+
+                if isinstance(encoder_fw_state, tf.contrib.rnn.LSTMStateTuple):
+                    # encoder_state_c = tf.concat(values=(encoder_fw_state.c, encoder_bw_state.c), axis=1)
+                    # encoder_state_h = tf.concat(values=(encoder_fw_state.h, encoder_bw_state.h), axis=1)
+                    encoder_state_h = tf.math.add(encoder_fw_state.h, encoder_bw_state.h)
+                    encoder_state_c = tf.math.add(encoder_fw_state.c, encoder_bw_state.c)
+                    self.rnn_state = tf.contrib.rnn.LSTMStateTuple(c=encoder_state_c, h=encoder_state_h)
+                elif isinstance(encoder_fw_state, tf.Tensor):
+                    # self.rnn_state = tf.concat(values=(encoder_fw_state, encoder_bw_state), axis=1)
+                    self.rnn_state = tf.math.add(encoder_fw_state, encoder_bw_state)
 
         # with tf.variable_scope("rnn_decoder", reuse=self.reuse):
         self.initial_states_decoder = self.rnn_state
+
+        # if self.bi:
+        #     _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder_reverse,
+        #                                           sequence_length=self.prediction_seq_len_encoder,
+        #                                           initial_state=self.initial_states,
+        #                                           dtype=tf.float32)
+        #     # print(self.initial_states_decoder.get_shape())
+        #     # print(self.rnn_state.get_shape())
+        #     self.initial_states_decoder = tf.add(self.initial_states_decoder, self.rnn_state)
 
         if not self.sampling_loss:
             self.rnn_outputs, self.rnn_state_decoder = tf.nn.dynamic_rnn(self.cell_decoder,
@@ -1061,11 +1092,11 @@ class Seq2seq(BaseModel):
                                self.summary_update,
                                self.outputs,
                                self.parameter_update,
-                               self.learning_rate,
                                self.global_step
                                ]
 
                 outputs = session.run(output_feed)
+                # print(outputs[4].c.shape)
                 # print("global_step", outputs[5])
                 # print("learning_rate", outputs[4])
                 return outputs[0], outputs[1], outputs[2]

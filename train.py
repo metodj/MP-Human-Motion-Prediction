@@ -71,7 +71,7 @@ parser.add_argument("--weight_sharing_rnn", action="store_true", help="Rnn weigh
 parser.add_argument("--epsilon", type=float, default="0.00000001", help="epsilon param for Adam optimizer")
 parser.add_argument("--dropout", type=float, default=None, help="Dropout rate.")
 parser.add_argument("--exp_decay", type=float, default=None, help="Decay rate.")
-
+parser.add_argument("--bi", action="store_true", help="Use bidirectional encoder.")
 
 # data representation
 parser.add_argument("--to_angles", action="store_true", help="use angle representation")
@@ -344,6 +344,7 @@ def get_seq2seq_config(args):
     config['epsilon'] = args.epsilon
     config['dropout'] = args.dropout
     config['exp_decay'] = args.exp_decay
+    config['bi'] = args.bi
 
     model_cls = models.Seq2seq
 
