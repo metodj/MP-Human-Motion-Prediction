@@ -613,6 +613,8 @@ class Seq2seq(BaseModel):
         else:
             self.regularizer = tf.contrib.layers.l2_regularizer(scale=self.l2)
 
+        self.l2_loss = None
+
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
         self.cell_decoder = None # The decoder cell.
@@ -695,17 +697,15 @@ class Seq2seq(BaseModel):
         if self.input_hidden_size is not None:
             if self.weight_sharing == "w/o":
                 if not self.sampling_loss:
-                    with tf.variable_scope("input_layer_decoder", reuse=self.reuse):
+                    with tf.variable_scope("input_layer_decoder", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                             kernel_regularizer=self.regularizer,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
                         if self.dropout:
                             self.inputs_hidden = tf.layers.dropout(self.inputs_hidden, rate=self.dropout,
                                                                    training=not self.reuse)
 
-                with tf.variable_scope("input_layer_encoder", reuse=self.reuse):
+                with tf.variable_scope("input_layer_encoder", reuse=self.reuse, regularizer=self.regularizer):
                     self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                                 kernel_regularizer=self.regularizer,
                                                                  activation=self.activation_fn_in, reuse=self.reuse)
                     if self.dropout:
                         self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
@@ -713,25 +713,22 @@ class Seq2seq(BaseModel):
 
             else:  # in case (s2s) and (all)
                 if not self.sampling_loss:
-                    with tf.variable_scope("input_layer_shared", reuse=self.reuse):
+                    with tf.variable_scope("input_layer_shared", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
-                                                             kernel_regularizer=self.regularizer,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
                         if self.dropout:
                             self.inputs_hidden = tf.layers.dropout(self.inputs_hidden, rate=self.dropout,
                                                                    training=not self.reuse)
 
-                    with tf.variable_scope("input_layer_shared", reuse=True):
+                    with tf.variable_scope("input_layer_shared", reuse=True, regularizer=self.regularizer):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                                     kernel_regularizer=self.regularizer,
                                                                      activation=self.activation_fn_in)
                         if self.dropout:
                             self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
                                                                           training=not self.reuse)
                 else:
-                    with tf.variable_scope("input_layer_shared", reuse=self.reuse):
+                    with tf.variable_scope("input_layer_shared", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
-                                                                     kernel_regularizer=self.regularizer,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
 
                         if self.dropout:
@@ -745,48 +742,39 @@ class Seq2seq(BaseModel):
 
     def build_cell(self):
         """Create recurrent cell."""
-        with tf.variable_scope("rnn_cell", reuse=self.reuse):
+        with tf.variable_scope("rnn_cell", reuse=self.reuse, regularizer=self.regularizer):
             if self.cell_type == C.LSTM:
                 if self.num_rnn_layers == 1:
-                    cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse,
-                                                   kernel_regularizer=self.regularizer)
+                    cell = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                     if not self.weight_sharing_rnn:
-                        cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse,
-                                                               kernel_regularizer=self.regularizer)
+                        cell_decoder = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                 else:
                     cell = tf.nn.rnn_cell.MultiRNNCell(
-                        [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse, kernel_regularizer=self.regularizer)
+                        [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                          for _ in range(self.num_rnn_layers)])
                     if not self.weight_sharing_rnn:
                         cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
-                            [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse,
-                                                     kernel_regularizer=self.regularizer)
+                            [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                              for _ in range(self.num_rnn_layers)])
 
-                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse,
-                                                        kernel_regularizer=self.regularizer)
-                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse,
-                                                          kernel_regularizer=self.regularizer)
+                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 if self.num_rnn_layers == 1:
-                    cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse, kernel_regularizer=self.regularizer)
+                    cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                     if not self.weight_sharing_rnn:
-                        cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse,
-                                                              kernel_regularizer=self.regularizer)
+                        cell_decoder = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                 else:
                     cell = tf.nn.rnn_cell.MultiRNNCell(
-                        [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse, kernel_regularizer=self.regularizer)
+                        [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                          for _ in range(self.num_rnn_layers)])
                     if not self.weight_sharing_rnn:
                         cell_decoder = tf.nn.rnn_cell.MultiRNNCell(
-                            [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse,
-                                                    kernel_regularizer=self.regularizer)
+                            [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                              for _ in range(self.num_rnn_layers)])
 
-                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse,
-                                                       kernel_regularizer=self.regularizer)
-                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse,
-                                                         kernel_regularizer=self.regularizer)
+                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
@@ -849,9 +837,8 @@ class Seq2seq(BaseModel):
 
     def build_fidelity_output(self):
         """Linear layer for fidelity output."""
-        with tf.variable_scope("fidelity_output", reuse=self.reuse):
-            self.fidelity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid,
-                                                       kernel_regularizer=self.regularizer,)
+        with tf.variable_scope("fidelity_output", reuse=self.reuse, regularizer=self.regularizer):
+            self.fidelity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
             if self.cell_type == "gru":
                 self.outputs_fid_tar = self.fidelity_linear_out(self.state_fid_tar)
                 self.outputs_fid_pred = self.fidelity_linear_out(self.state_fid_pred)
@@ -870,9 +857,8 @@ class Seq2seq(BaseModel):
         """continuity linear input layer."""
         if self.input_hidden_size is not None:
             if self.weight_sharing != 'all':
-                with tf.variable_scope("input_continuity", reuse=self.reuse):
+                with tf.variable_scope("input_continuity", reuse=self.reuse, regularizer=self.regularizer):
                     self.continuity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                                                             kernel_regularizer=self.regularizer,
                                                              activation=self.activation_fn_in)
 
                     self.inputs_hidden_con_tar = self.continuity_linear(self.data_inputs)
@@ -912,9 +898,8 @@ class Seq2seq(BaseModel):
 
     def build_continuity_output(self):
         """Linear layer for continuity output."""
-        with tf.variable_scope("continuity_output", reuse=self.reuse):
-            self.continuity_linear_out = tf.layers.Dense(1, use_bias=True, kernel_regularizer=self.regularizer,
-                                                         activation=tf.nn.sigmoid)
+        with tf.variable_scope("continuity_output", reuse=self.reuse, regularizer=self.regularizer):
+            self.continuity_linear_out = tf.layers.Dense(1, use_bias=True, activation=tf.nn.sigmoid)
             if self.cell_type == "gru":
                 self.outputs_con_tar = self.continuity_linear_out(self.state_con_tar)
                 self.outputs_con_pred = self.continuity_linear_out(self.state_con_pred)
@@ -974,14 +959,14 @@ class Seq2seq(BaseModel):
 
         # RNN
         if not self.bi:
-            with tf.variable_scope("rnn_encoder", reuse=self.reuse):
+            with tf.variable_scope("rnn_encoder", reuse=self.reuse, regularizer=self.regularizer):
                 _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder,
                                                       sequence_length=self.prediction_seq_len_encoder,
                                                       initial_state=self.initial_states,
                                                       dtype=tf.float32)
 
         else:
-            with tf.variable_scope("rnn_encoder", reuse=self.reuse):
+            with tf.variable_scope("rnn_encoder", reuse=self.reuse, regularizer=self.regularizer):
                 _, (encoder_fw_state, encoder_bw_state) = \
                     tf.nn.bidirectional_dynamic_rnn(self.cell, self.cell,
                                                     self.inputs_hidden_encoder,
@@ -1001,15 +986,6 @@ class Seq2seq(BaseModel):
 
         # with tf.variable_scope("rnn_decoder", reuse=self.reuse):
         self.initial_states_decoder = self.rnn_state
-
-        # if self.bi:
-        #     _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder_reverse,
-        #                                           sequence_length=self.prediction_seq_len_encoder,
-        #                                           initial_state=self.initial_states,
-        #                                           dtype=tf.float32)
-        #     # print(self.initial_states_decoder.get_shape())
-        #     # print(self.rnn_state.get_shape())
-        #     self.initial_states_decoder = tf.add(self.initial_states_decoder, self.rnn_state)
 
         if not self.sampling_loss:
             self.rnn_outputs, self.rnn_state_decoder = tf.nn.dynamic_rnn(self.cell_decoder,
@@ -1036,16 +1012,14 @@ class Seq2seq(BaseModel):
             for t in range(self.sequence_length):
                 if self.input_hidden_size is not None:
                     if self.weight_sharing == 'w/o':
-                        with tf.variable_scope("input_layer_decoder", reuse=tf.AUTO_REUSE):
-                            tmp = tf.layers.dense(seed, self.input_hidden_size, kernel_regularizer=self.regularizer,
-                                                  activation=self.activation_fn_in)
+                        with tf.variable_scope("input_layer_decoder", reuse=tf.AUTO_REUSE, regularizer=self.regularizer):
+                            tmp = tf.layers.dense(seed, self.input_hidden_size, activation=self.activation_fn_in)
                             if self.dropout:
                                 tmp = tf.layers.dropout(tmp, rate=self.dropout, training=not self.reuse)
                     else:
-                        with tf.variable_scope("input_layer_shared", reuse=True):
+                        with tf.variable_scope("input_layer_shared", reuse=True, regularizer=self.regularizer):
                             # tmp = self.linear_weight_sharing(seed)
-                            tmp = tf.layers.dense(seed, self.input_hidden_size, kernel_regularizer=self.regularizer,
-                                                  activation=self.activation_fn_in)
+                            tmp = tf.layers.dense(seed, self.input_hidden_size, activation=self.activation_fn_in)
 
                             if self.dropout:
                                 tmp = tf.layers.dropout(tmp, rate=self.dropout, training=not self.reuse)
@@ -1054,14 +1028,13 @@ class Seq2seq(BaseModel):
 
                 # RNN step
                 seed_, state = self.cell_decoder(inputs=tmp, state=state)
-                with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE): # be careful with this tf.AUTO_REUSE...
+                with tf.variable_scope("output_layer", reuse=tf.AUTO_REUSE, regularizer=self.regularizer):
+                    # be careful with this tf.AUTO_REUSE...
                     # seed_ = self.decoder_output_dense(seed_)
-                    seed_ = tf.layers.dense(seed_, self.input_size, use_bias=True,
-                                            kernel_regularizer=self.regularizer,
-                                            activation=self.activation_fn_out)
+                    seed_ = tf.layers.dense(seed_, self.input_size, use_bias=True, activation=self.activation_fn_out)
 
                     if self.dropout:
-                        seed_= tf.layers.dropout(seed_, rate=self.dropout, training=not self.reuse)
+                        seed_ = tf.layers.dropout(seed_, rate=self.dropout, training=not self.reuse)
 
                 if self.residuals:
                     seed_ = tf.add(seed_, seed)
@@ -1079,7 +1052,7 @@ class Seq2seq(BaseModel):
         if self.fidelity:
             self.build_fidelity_input()
 
-            with tf.variable_scope("rnn_fidelity", reuse=self.reuse):
+            with tf.variable_scope("rnn_fidelity", reuse=self.reuse, regularizer=self.regularizer):
                 _, self.state_fid_tar = tf.nn.dynamic_rnn(self.cell_fidelity,
                                                           self.inputs_hidden_fid_tar,
                                                           sequence_length=self.prediction_seq_len,
@@ -1098,7 +1071,7 @@ class Seq2seq(BaseModel):
         if self.continuity:
             self.build_continuity_input()
 
-            with tf.variable_scope("rnn_continuity", reuse=self.reuse):
+            with tf.variable_scope("rnn_continuity", reuse=self.reuse, regularizer=self.regularizer):
                 _, self.state_con_tar = tf.nn.dynamic_rnn(self.cell_continuity,
                                                           self.inputs_hidden_con_tar,
                                                           sequence_length=self.source_seq_len + self.prediction_seq_len,
@@ -1113,8 +1086,10 @@ class Seq2seq(BaseModel):
             self.build_continuity_output()
             self.build_loss_continuity()
 
-            # L2 Regularization
-            self.loss = self.loss + tf.losses.get_regularization_loss()
+        # L2 Regularization
+        if self.l2 > 0:
+            self.l2_loss = tf.losses.get_regularization_loss()
+            self.loss = self.loss + self.l2_loss
 
     def residuals_decoder(self):
         self.outputs = tf.add(self.outputs, self.prediction_inputs)
@@ -1137,10 +1112,12 @@ class Seq2seq(BaseModel):
                                self.summary_update,
                                self.outputs,
                                self.parameter_update,
-                               self.global_step
+                               self.global_step,
+                               self.l2_loss
                                ]
 
                 outputs = session.run(output_feed)
+                print("loss", outputs[0], "l2_loss", outputs[5], "p_loss", outputs[0] - outputs[5])
                 # print(outputs[4].c.shape)
                 # print("global_step", outputs[5])
                 # print("learning_rate", outputs[4])

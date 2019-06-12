@@ -468,8 +468,8 @@ def train():
                     stop_signal = True
                     break
 
-            if ARGS.use_cpu:
-                stop_signal = True
+            # if ARGS.use_cpu:
+            #     stop_signal = True
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
