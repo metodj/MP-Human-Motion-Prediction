@@ -649,9 +649,6 @@ class Seq2seq(BaseModel):
         self.loss_continuity = None
         self.parameter_update_disc = None
 
-        self.inputs_hidden_encoder_reverse = None
-        self.inputs_encoder_reverse = None
-
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
 
@@ -728,7 +725,6 @@ class Seq2seq(BaseModel):
         else:
             self.inputs_hidden = self.prediction_inputs
             self.inputs_hidden_encoder = self.inputs_encoder
-            self.inputs_hidden_encoder_reverse = self.inputs_encoder_reverse
 
     def build_cell(self):
         """Create recurrent cell."""
@@ -964,17 +960,7 @@ class Seq2seq(BaseModel):
                     # self.rnn_state = tf.concat(values=(encoder_fw_state, encoder_bw_state), axis=1)
                     self.rnn_state = tf.math.add(encoder_fw_state, encoder_bw_state)
 
-        # with tf.variable_scope("rnn_decoder", reuse=self.reuse):
         self.initial_states_decoder = self.rnn_state
-
-        # if self.bi:
-        #     _, self.rnn_state = tf.nn.dynamic_rnn(self.cell, self.inputs_hidden_encoder_reverse,
-        #                                           sequence_length=self.prediction_seq_len_encoder,
-        #                                           initial_state=self.initial_states,
-        #                                           dtype=tf.float32)
-        #     # print(self.initial_states_decoder.get_shape())
-        #     # print(self.rnn_state.get_shape())
-        #     self.initial_states_decoder = tf.add(self.initial_states_decoder, self.rnn_state)
 
         if not self.sampling_loss:
             self.rnn_outputs, self.rnn_state_decoder = tf.nn.dynamic_rnn(self.cell_decoder,
