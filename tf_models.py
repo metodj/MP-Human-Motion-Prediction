@@ -63,6 +63,7 @@ class BaseModel(object):
 
         self.loss_continuity = None
         self.loss_fidelity = None
+        self.fidelity = None
 
         self.to_angles = self.config["to_angles"]
         self.dropout = self.config['dropout']
@@ -154,8 +155,9 @@ class BaseModel(object):
         # Note that summary_routines are called outside of the self.mode name_scope. Hence, self.mode should be
         # prepended to the summary name if needed.
         tf.summary.scalar(self.mode+"/loss", self.loss, collections=[self.mode+"/model_summary"])
-        tf.summary.scalar(self.mode + "/loss_continuity", self.loss_continuity, collections=[self.mode + "/model_summary"])
-        tf.summary.scalar(self.mode + "/loss_fidelity", self.loss_fidelity, collections=[self.mode + "/model_summary"])
+        if self.fidelity:
+            tf.summary.scalar(self.mode + "/loss_continuity", self.loss_continuity, collections=[self.mode + "/model_summary"])
+            tf.summary.scalar(self.mode + "/loss_fidelity", self.loss_fidelity, collections=[self.mode + "/model_summary"])
 
         if self.is_training:
             tf.summary.scalar(self.mode + "/learning_rate",
@@ -784,11 +786,11 @@ class Seq2seq(BaseModel):
                 self.cell_decoder = cell
 
             if self.dropout and not self.reuse:  # not self.reuse is there so that we apply dropout only during training
-                self.cell = tf.nn.rnn_cell.DropoutWrapper(self.cell, input_keep_prob=self.dropout,
-                                                          output_keep_prob=self.dropout, state_keep_prob=self.dropout)
-                self.cell_decoder = tf.nn.rnn_cell.DropoutWrapper(self.cell_decoder, input_keep_prob=self.dropout,
+                self.cell = tf.nn.rnn_cell.DropoutWrapper(self.cell, input_keep_prob=1,
+                                                          output_keep_prob=self.dropout, state_keep_prob=1)
+                self.cell_decoder = tf.nn.rnn_cell.DropoutWrapper(self.cell_decoder, input_keep_prob=1,
                                                                   output_keep_prob=self.dropout,
-                                                                  state_keep_prob=self.dropout)
+                                                                  state_keep_prob=1)
 
             self.cell_fidelity = cell_fidelity
             self.cell_continuity = cell_continuity
