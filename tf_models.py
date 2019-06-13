@@ -148,8 +148,6 @@ class BaseModel(object):
             # if self.dropout:
             #     self.outputs = tf.layers.dropout(self.outputs, rate=self.dropout, training=not self.reuse)
 
-            print("outputs\t", self.outputs.get_shape())
-
     def summary_routines(self):
         """Create the summary operations necessary to write logs into tensorboard."""
         # Note that summary_routines are called outside of the self.mode name_scope. Hence, self.mode should be
@@ -799,10 +797,9 @@ class Seq2seq(BaseModel):
         """Fidelity linear input layer."""
         if self.input_hidden_size is not None:
             if self.weight_sharing != 'all':
-                with tf.variable_scope("input_fidelity", reuse=self.reuse):
+                with tf.variable_scope("input_fidelity", reuse=self.reuse, regularizer=self.regularizer):
                     self.fidelity_linear = tf.layers.Dense(self.input_hidden_size, use_bias=True,
-                                                           activation=self.activation_fn_in,
-                                                           kernel_regularizer=self.regularizer)
+                                                           activation=self.activation_fn_in)
 
                     self.inputs_hidden_fid_tar = self.fidelity_linear(self.prediction_targets)
                     self.inputs_hidden_fid_pred = self.fidelity_linear(
@@ -814,21 +811,19 @@ class Seq2seq(BaseModel):
                         self.inputs_hidden_fid_pred = tf.layers.dropout(self.inputs_hidden_fid_pred, rate=self.dropout,
                                                                         training=not self.reuse)
             else:
-                with tf.variable_scope("input_layer_shared", reuse=True):
+                with tf.variable_scope("input_layer_shared", reuse=True, regularizer=self.regularizer):
                     # self.inputs_hidden_fid_tar = self.linear_weight_sharing(self.prediction_targets)
                     # self.inputs_hidden_fid_pred = self.linear_weight_sharing(
                     #     self.outputs)  # (16, 24, 135) -> # (16, 24, input_hidden_size)
 
                     self.inputs_hidden_fid_tar = tf.layers.dense(self.prediction_targets, self.input_hidden_size,
-                                                                 kernel_regularizer=self.regularizer,
                                                                  activation=self.activation_fn_in)
                     if self.dropout:
                         self.inputs_hidden_fid_tar = tf.layers.dropout(self.inputs_hidden_fid_tar, rate=self.dropout,
                                                                        training=not self.reuse)
-                with tf.variable_scope("input_layer_shared", reuse=True):
+                with tf.variable_scope("input_layer_shared", reuse=True, regularizer=self.regularizer):
                     self.inputs_hidden_fid_pred = tf.layers.dense(self.outputs, self.input_hidden_size,
-                                                                  activation=self.activation_fn_in,
-                                                                  kernel_regularizer=self.regularizer)
+                                                                  activation=self.activation_fn_in)
                     if self.dropout:
                         self.inputs_hidden_fid_pred = tf.layers.dropout(self.inputs_hidden_fid_pred, rate=self.dropout,
                                                                         training=not self.reuse)
@@ -872,24 +867,22 @@ class Seq2seq(BaseModel):
                         self.inputs_hidden_con_pred = tf.layers.dropout(self.inputs_hidden_con_pred, rate=self.dropout,
                                                                         training=not self.reuse)
             else:
-                with tf.variable_scope("input_layer_shared", reuse=True):
+                with tf.variable_scope("input_layer_shared", reuse=True, regularizer=self.regularizer):
                     # self.inputs_hidden_con_tar = self.linear_weight_sharing(self.data_inputs)
                     # self.inputs_hidden_con_pred = self.linear_weight_sharing(
                     #     tf.concat([self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1))
 
                     self.inputs_hidden_con_tar = tf.layers.dense(self.data_inputs, self.input_hidden_size,
-                                                                 kernel_regularizer=self.regularizer,
                                                                  activation=self.activation_fn_in)
 
                     if self.dropout:
                         self.inputs_hidden_con_tar = tf.layers.dropout(self.inputs_hidden_con_tar, rate=self.dropout,
                                                                        training=not self.reuse)
 
-                with tf.variable_scope("input_layer_shared", reuse=True):
+                with tf.variable_scope("input_layer_shared", reuse=True, regularizer=self.regularizer):
                     self.inputs_hidden_con_pred = tf.layers.dense(tf.concat(
                                             [self.data_inputs[:, :self.source_seq_len, :], self.outputs], axis=1),
-                                            self.input_hidden_size, kernel_regularizer=self.regularizer,
-                                            activation=self.activation_fn_in)
+                                            self.input_hidden_size, activation=self.activation_fn_in)
                     if self.dropout:
                         self.inputs_hidden_con_pred = tf.layers.dropout(self.inputs_hidden_con_pred, rate=self.dropout,
                                                                         training=not self.reuse)
@@ -918,7 +911,7 @@ class Seq2seq(BaseModel):
     def optimization_routines(self):
         """Add an optimizer."""
         if self.exp_decay:
-            self.learning_rate = tf.train.exponential_decay(self.learning_rate, self.global_step, 500, \
+            self.learning_rate = tf.train.exponential_decay(self.learning_rate, self.global_step, 500,
                                                             self.exp_decay, staircase=True)
 
         # Use a simple SGD optimizer.
