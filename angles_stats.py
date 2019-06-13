@@ -55,7 +55,7 @@ if __name__ == '__main__':
     data_path = ARGS.read_dir
 
     if not os.path.exists(data_path):
-        raise ValueError("Specified path does not exists!")
+        raise ValueError("Specified path does not exist!")
 
     poses = []
     for file in os.listdir(data_path):

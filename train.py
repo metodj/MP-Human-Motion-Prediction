@@ -72,6 +72,7 @@ parser.add_argument("--epsilon", type=float, default="0.00000001", help="epsilon
 parser.add_argument("--dropout", type=float, default=None, help="Dropout rate.")
 parser.add_argument("--exp_decay", type=float, default=None, help="Decay rate.")
 parser.add_argument("--bi", action="store_true", help="Use bidirectional encoder.")
+parser.add_argument("--l2", type=float, default=0.0, help="l2 regularization parameter")
 
 # data representation
 parser.add_argument("--to_angles", action="store_true", help="use angle representation")
@@ -126,9 +127,6 @@ def create_model(session):
         means = train_data.mean_channel
         vars = train_data.var_channel
 
-        # print("train_pl\t", str(type(train_pl)))
-        # print(train_pl.keys())
-
     # Load validation data.
     with tf.name_scope("validation_data"):
         valid_data = TFRecordMotionDataset(data_path=valid_data_path,
@@ -141,8 +139,6 @@ def create_model(session):
                                            to_angles=config["to_angles"],
                                            standardization=config["standardization"])
         valid_pl = valid_data.get_tf_samples()
-        # print("valid_pl\t", str(type(valid_pl)))
-        # print(valid_pl.keys())
 
     # Create the training model.
     with tf.name_scope(C.TRAIN):
@@ -243,6 +239,7 @@ def get_dummy_config(args):
     config["to_angles"] = args.to_angles
     config["standardization"] = args.stand
     config["num_rnn_layers"] = args.num_rnn_layers
+    config["l2"] = args.l2
 
     model_cls = models.DummyModel
 
@@ -345,6 +342,7 @@ def get_seq2seq_config(args):
     config['dropout'] = args.dropout
     config['exp_decay'] = args.exp_decay
     config['bi'] = args.bi
+    config["l2"] = args.l2
 
     model_cls = models.Seq2seq
 
@@ -470,8 +468,8 @@ def train():
                     stop_signal = True
                     break
 
-            if ARGS.use_cpu:
-                stop_signal = True
+            # if ARGS.use_cpu:
+            #     stop_signal = True
 
             # Evaluation: make a full pass on the validation split.
             valid_metrics, valid_time, _ = evaluate_model(valid_model, valid_iter, metrics_engine)
