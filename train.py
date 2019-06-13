@@ -416,7 +416,7 @@ def train():
                     # get the predictions and ground truth values
                     predictions, targets, seed_sequence, data_id = _eval_model.sampled_step(sess)  # (16, 24, 135)
 
-                    if ARGS.stand:
+                    if ARGS.stand and not ARGS.to_angles:
                         targets = (targets) * np.sqrt(vars) + means
                         predictions = (predictions) * np.sqrt(vars) + means
                         seed_sequence = (seed_sequence) * np.sqrt(vars) + means

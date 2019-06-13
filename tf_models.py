@@ -1105,12 +1105,11 @@ class Seq2seq(BaseModel):
                                self.summary_update,
                                self.outputs,
                                self.parameter_update,
-                               self.global_step,
-                               self.l2_loss
+                               self.global_step
                                ]
 
                 outputs = session.run(output_feed)
-                print("loss", outputs[0], "l2_loss", outputs[5], "p_loss", outputs[0] - outputs[5])
+                # print("loss", outputs[0], "l2_loss", outputs[5], "p_loss", outputs[0] - outputs[5])
                 # print(outputs[4].c.shape)
                 # print("global_step", outputs[5])
                 # print("learning_rate", outputs[4])
@@ -1166,6 +1165,9 @@ class Seq2seq(BaseModel):
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
         if self.to_angles:
+            targets = (targets) * np.sqrt(self.vars) + self.means
+            predictions = (predictions) * np.sqrt(self.vars) + self.means
+
             if targets.shape[1] != 0:
                 targets = angle_axis_to_rot_mats_cv2(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
