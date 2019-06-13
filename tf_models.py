@@ -607,13 +607,12 @@ class Seq2seq(BaseModel):
         self.exp_decay = self.config['exp_decay']
         self.bi = self.config['bi']
 
+        self.l2_loss = None
         self.l2 = self.config["l2"]
         if self.l2 == 0.0:
             self.regularizer = None
         else:
             self.regularizer = tf.contrib.layers.l2_regularizer(scale=self.l2)
-
-        self.l2_loss = None
 
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
