@@ -61,6 +61,9 @@ class BaseModel(object):
         self.parameter_update = None  # The training op.
         self.summary_update = None  # Summary op.
 
+        self.loss_continuity = None
+        self.loss_fidelity = None
+
         self.to_angles = self.config["to_angles"]
         self.dropout = self.config['dropout']
 
@@ -151,6 +154,8 @@ class BaseModel(object):
         # Note that summary_routines are called outside of the self.mode name_scope. Hence, self.mode should be
         # prepended to the summary name if needed.
         tf.summary.scalar(self.mode+"/loss", self.loss, collections=[self.mode+"/model_summary"])
+        tf.summary.scalar(self.mode + "/loss_continuity", self.loss_continuity, collections=[self.mode + "/model_summary"])
+        tf.summary.scalar(self.mode + "/loss_fidelity", self.loss_fidelity, collections=[self.mode + "/model_summary"])
 
         if self.is_training:
             tf.summary.scalar(self.mode + "/learning_rate",
