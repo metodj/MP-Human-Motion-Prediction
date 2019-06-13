@@ -43,6 +43,7 @@ parser.add_argument("--batch_size", type=int, default=16, help="Batch size to us
 parser.add_argument("--model_type", type=str, default="dummy", help="Model to train.")
 parser.add_argument("--cell_type", type=str, default="lstm", help="RNN cell type: lstm, gru")
 parser.add_argument("--cell_size", type=int, default=256, help="RNN cell size.")
+parser.add_argument("--cell_size_disc", type=int, default=256, help="RNN cell size.")
 parser.add_argument("--input_hidden_size", type=int, default=None, help="Input dense layer before the recurrent cell.")
 parser.add_argument("--activation_fn", type=str, default=None, help="Activation Function on the output.")
 parser.add_argument("--activation_input", type=str, default=None, help="input layer activation")
@@ -343,6 +344,7 @@ def get_seq2seq_config(args):
     config['exp_decay'] = args.exp_decay
     config['bi'] = args.bi
     config["l2"] = args.l2
+    config['cell_size_disc'] = args.cell_size_disc
 
     model_cls = models.Seq2seq
 

@@ -613,6 +613,7 @@ class Seq2seq(BaseModel):
         self.epsilon = self.config['epsilon']
         self.exp_decay = self.config['exp_decay']
         self.bi = self.config['bi']
+        self.cell_size_disc = self.config['cell_size_disc']
 
         self.l2 = self.config["l2"]
         if self.l2 == 0.0:
@@ -758,8 +759,8 @@ class Seq2seq(BaseModel):
                             [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                              for _ in range(self.num_rnn_layers)])
 
-                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size_disc, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size_disc, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 if self.num_rnn_layers == 1:
                     cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
@@ -774,8 +775,8 @@ class Seq2seq(BaseModel):
                             [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                              for _ in range(self.num_rnn_layers)])
 
-                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
-                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size_disc, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size_disc, reuse=self.reuse)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
