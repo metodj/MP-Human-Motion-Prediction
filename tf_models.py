@@ -145,8 +145,8 @@ class BaseModel(object):
             self.outputs = tf.layers.dense(self.prediction_representation, self.input_size,
                                            use_bias=True, activation=self.activation_fn_out, reuse=self.reuse)
             
-            if self.dropout:
-                self.outputs = tf.layers.dropout(self.outputs, rate=self.dropout, training=not self.reuse)
+            # if self.dropout:
+            #     self.outputs = tf.layers.dropout(self.outputs, rate=self.dropout, training=not self.reuse)
 
             print("outputs\t", self.outputs.get_shape())
 
@@ -613,6 +613,7 @@ class Seq2seq(BaseModel):
         self.epsilon = self.config['epsilon']
         self.exp_decay = self.config['exp_decay']
         self.bi = self.config['bi']
+        self.cell_size_disc = self.config['cell_size_disc']
 
         self.l2_loss = None
         self.l2 = self.config["l2"]
@@ -701,40 +702,40 @@ class Seq2seq(BaseModel):
                     with tf.variable_scope("input_layer_decoder", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
-                        if self.dropout:
-                            self.inputs_hidden = tf.layers.dropout(self.inputs_hidden, rate=self.dropout,
-                                                                   training=not self.reuse)
+                        # if self.dropout:
+                        #     self.inputs_hidden = tf.layers.dropout(self.inputs_hidden, rate=self.dropout,
+                        #                                            training=not self.reuse)
 
                 with tf.variable_scope("input_layer_encoder", reuse=self.reuse, regularizer=self.regularizer):
                     self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                  activation=self.activation_fn_in, reuse=self.reuse)
-                    if self.dropout:
-                        self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
-                                                                       training=not self.reuse)
+                    # if self.dropout:
+                    #     self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
+                    #                                                    training=not self.reuse)
 
             else:  # in case (s2s) and (all)
                 if not self.sampling_loss:
                     with tf.variable_scope("input_layer_shared", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
                                                              activation=self.activation_fn_in, reuse=self.reuse)
-                        if self.dropout:
-                            self.inputs_hidden = tf.layers.dropout(self.inputs_hidden, rate=self.dropout,
-                                                                   training=not self.reuse)
+                        # if self.dropout:
+                        #     self.inputs_hidden = tf.layers.dropout(self.inputs_hidden, rate=self.dropout,
+                        #                                            training=not self.reuse)
 
                     with tf.variable_scope("input_layer_shared", reuse=True, regularizer=self.regularizer):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in)
-                        if self.dropout:
-                            self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
-                                                                          training=not self.reuse)
+                        # if self.dropout:
+                        #     self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
+                        #                                                   training=not self.reuse)
                 else:
                     with tf.variable_scope("input_layer_shared", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
 
-                        if self.dropout:
-                            self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
-                                                                          training=not self.reuse)
+                        # if self.dropout:
+                        #     self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout,
+                        #                                                   training=not self.reuse)
 
         else:
             self.inputs_hidden = self.prediction_inputs
@@ -757,8 +758,8 @@ class Seq2seq(BaseModel):
                             [tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
                              for _ in range(self.num_rnn_layers)])
 
-                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
-                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size, reuse=self.reuse)
+                cell_fidelity = tf.nn.rnn_cell.LSTMCell(self.cell_size_disc, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.LSTMCell(self.cell_size_disc, reuse=self.reuse)
             elif self.cell_type == C.GRU:
                 if self.num_rnn_layers == 1:
                     cell = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
@@ -773,8 +774,8 @@ class Seq2seq(BaseModel):
                             [tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
                              for _ in range(self.num_rnn_layers)])
 
-                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
-                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size, reuse=self.reuse)
+                cell_fidelity = tf.nn.rnn_cell.GRUCell(self.cell_size_disc, reuse=self.reuse)
+                cell_continuity = tf.nn.rnn_cell.GRUCell(self.cell_size_disc, reuse=self.reuse)
             else:
                 raise ValueError("Cell type '{}' unknown".format(self.cell_type))
 
@@ -1170,9 +1171,10 @@ class Seq2seq(BaseModel):
         seed_sequence = data_sample[:, :self.source_seq_len]  # 0:120 -> 120 (seed)
         predictions = self.sample(session, seed_sequence, prediction_steps=self.target_seq_len)
 
+        targets = (targets) * np.sqrt(self.vars) + self.means
+        predictions = (predictions) * np.sqrt(self.vars) + self.means
+
         if self.to_angles:
-            targets = (targets) * np.sqrt(self.vars) + self.means
-            predictions = (predictions) * np.sqrt(self.vars) + self.means
 
             if targets.shape[1] != 0:
                 targets = angle_axis_to_rot_mats_cv2(targets)  # train (16, 24, 135) / test (16, 24, 135)
@@ -1184,10 +1186,6 @@ class Seq2seq(BaseModel):
             pred_val = np.reshape(predictions, [-1, self.NUM_JOINTS, 3, 3])  # (64, 24, 135)
             predictions = get_closest_rotmat(pred_val)  # (1536, 15, 3, 3)
             predictions = np.reshape(predictions, [batch_size, seq_length, self.input_size])  # (64, 24, 135)
-
-        # if self.standardization:
-        #     predictions = (predictions * self.vars) + self.means
-        #     targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
