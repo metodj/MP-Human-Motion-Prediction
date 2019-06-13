@@ -129,7 +129,7 @@ class TFRecordMotionDataset(Dataset):
         # here would be a good idea (disabled for now)
         if self.standardization:
             self.tf_data = self.tf_data.map(functools.partial(self._standardization, mean=self.mean_channel,
-                                                var=self.var_channel), num_parallel_calls=self.num_parallel_calls)
+                            var=self.var_channel, to_angles=self.to_angles), num_parallel_calls=self.num_parallel_calls)
 
         # Preprocessing to euler angles
         # if self.to_angles:
@@ -192,11 +192,7 @@ class TFRecordMotionDataset(Dataset):
         """Set the shape of the poses explicitly."""
         # This is required as otherwise the last dimension of the batch is unknown, which is a problem for the model.
         seq_len = sample["poses"].get_shape().as_list()[0]
-
-        if not self.to_angles:
-            sample["poses"].set_shape([seq_len, self.mean_channel.shape[0]])
-        else:
-            sample["poses"].set_shape([seq_len, 45])
+        sample["poses"].set_shape([seq_len, self.mean_channel.shape[0]])
         return sample
 
     @staticmethod
@@ -272,7 +268,7 @@ class TFRecordMotionDataset(Dataset):
         return model_sample
 
     @staticmethod
-    def _standardization(tf_sample_dict, mean, var):
+    def _standardization(tf_sample_dict, mean, var, to_angles):
         """
         Placeholder for custom pre-processing.
         Args:
@@ -292,7 +288,10 @@ class TFRecordMotionDataset(Dataset):
         processed = tf.py_func(_standardize, [tf_sample_dict["poses"]], tf.float32)
 
         # Set the shape on the output of `py_func` again explicitly, otherwise some functions might complain later on.
-        processed.set_shape([None, 135])
+        if to_angles:
+            processed.set_shape([None, 45])
+        else:
+            processed.set_shape([None, 135])
 
         # Update the sample dict and return it.
         model_sample = tf_sample_dict
