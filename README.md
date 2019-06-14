@@ -4,4 +4,10 @@ Group project. Metod Jazbec and Rok Šikonja.
 
 ## Precomputing 
 
-python precompute_angles.py --read_dir "C:/Users/roksi/data/" --write_dir "C:/Users/roksi/data_angles_1/"
+
+./data/ includes training/, validation/ and test/ poses with rotation matrix representation
+```
+python precompute_angles.py 
+--read_dir "./data/" 
+--write_dir "./data_angles/"
+```
