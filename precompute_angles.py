@@ -12,6 +12,18 @@ parser.add_argument('--write_dir', required=True, default='C:/Users/roksi/data_a
 
 ARGS = parser.parse_args()
 
+if not os.path.exists(ARGS.write_dir):
+    os.makedirs(ARGS.write_dir)
+
+if not os.path.exists(os.path.join(ARGS.write_dir, "training")):
+    os.makedirs(os.path.join(ARGS.write_dir, "training"))
+
+if not os.path.exists(os.path.join(ARGS.write_dir, "validation")):
+    os.makedirs(os.path.join(ARGS.write_dir, "validation"))
+
+if not os.path.exists(os.path.join(ARGS.write_dir, "test")):
+    os.makedirs(os.path.join(ARGS.write_dir, "test"))
+
 
 def read_tfrecords(tfrecords_path, nr=5, angles=True):
     """Read tfrecord file.
