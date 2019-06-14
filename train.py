@@ -40,7 +40,7 @@ parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning
 parser.add_argument("--batch_size", type=int, default=16, help="Batch size to use during training.")
 
 # Architecture
-parser.add_argument("--model_type", type=str, default="dummy", help="Model to train.")
+parser.add_argument("--model_type", type=str, default="seq2seq", help="Model to train.")
 parser.add_argument("--cell_type", type=str, default="lstm", help="RNN cell type: lstm, gru")
 parser.add_argument("--cell_size", type=int, default=256, help="RNN cell size.")
 parser.add_argument("--cell_size_disc", type=int, default=256, help="RNN cell size.")
@@ -84,7 +84,13 @@ ARGS = parser.parse_args()
 # EXPERIMENT_TIMESTAMP = str(int(time.time()))
 
 EXPERIMENT_TIMESTAMP = datetime.datetime.now().strftime("%d_%H-%M")
-LOG_FILE = "./logs/log_" + EXPERIMENT_TIMESTAMP
+
+LOG_DIR = "./logs/"
+LOG_FILE = os.path.join(LOG_DIR, "log_" + EXPERIMENT_TIMESTAMP)
+
+if ARGS.log:
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
 
 
 def create_model(session):
