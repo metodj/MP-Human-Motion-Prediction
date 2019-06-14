@@ -16,7 +16,7 @@ from constants import Constants as C
 from utils import get_activation_fn
 from utils import geodesic_distance
 from motion_metrics import get_closest_rotmat
-from pp_utils import angle_axis_to_rot_mats_cv2
+from pp_utils import angle_axis_to_rot_mats_cv2, angle_axis_to_rot_mats
 
 
 class BaseModel(object):
@@ -101,14 +101,13 @@ class BaseModel(object):
             targets_pose = self.prediction_targets
 
         with tf.name_scope("loss"):
-            if not self.to_angles:
-                if self.loss == "geo":
-                    # Geodesic loss
-                    self.loss = geodesic_distance(targets_pose, predictions_pose)
+            if self.loss == "geo":
+                # Geodesic loss
+                if self.to_angles:
+                    self.loss = geodesic_distance(angle_axis_to_rot_mats(targets_pose),
+                                              angle_axis_to_rot_mats(predictions_pose))
                 else:
-                    # MSE
-                    diff = targets_pose - predictions_pose
-                    self.loss = tf.reduce_mean(tf.square(diff))
+                    self.loss = geodesic_distance(targets_pose, predictions_pose)
             else:
                 diff = targets_pose - predictions_pose
                 self.loss = tf.reduce_mean(tf.square(diff))
