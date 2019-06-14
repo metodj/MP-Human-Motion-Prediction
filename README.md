@@ -90,6 +90,39 @@ python train.py
 
 ### Results
 
+#### Our Model
+
+```
+python train.py
+--use_cpu False
+--log False  # create log file
+
+--data_dir ./data/
+--save_dir ./experiments/ 
+--experiment_name jazbec_sikonja
+
+
+--learning_rate 0.0005
+--batch_size 100
+--num_epochs 100
+--print_every 100
+--loss geo
+
+--stand
+
+--model_type seq2seq
+--cell_type lstm
+--cell_size 1024
+--input_hidden_size 1024
+--residuals
+--samp_loss
+
+--weight_sharing s2s  # weight sharing, options: w/o (?), s2s (seq2seq only), all
+--weight_sharing_rnn
+--dropout 0.1
+```
+
+
 #### On Human Motion Prediction using Recurrent Neural Networks
 
 Replication of model from paper: seq2seq with residual connections and sampling loss.
@@ -109,9 +142,9 @@ python train.py
 --model_type seq2seq 
 --cell_type gru
 --cell_size  1024
---input_hidden_size None  # input dense layer size
---residuals  # enable residual connection
---samp_loss  # enable sampling loss
+--input_hidden_size None
+--residuals
+--samp_loss
 --weight_sharing_rnn
 ```
 
@@ -134,10 +167,10 @@ python train.py
 --model_type seq2seq 
 --cell_type gru
 --cell_size  1024
---input_hidden_size 1024  # input dense layer size
+--input_hidden_size 1024
 --residuals
 --samp_loss
---weight_sharing
+--weight_sharing w/o
 --weight_sharing_rnn
 
 --fidelity
