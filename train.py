@@ -70,7 +70,8 @@ parser.add_argument("--update_ckpt", action="store_true", help="Only store model
 parser.add_argument("--weight_sharing", type=str, default="w/o", help="other options: seq2seq only (s2s), all (all)")
 parser.add_argument("--weight_sharing_rnn", action="store_true", help="Rnn weight sharing.")
 parser.add_argument("--epsilon", type=float, default="0.00000001", help="epsilon param for Adam optimizer")
-parser.add_argument("--dropout", type=float, default=None, help="Dropout rate.")
+parser.add_argument("--dropout", type=float, default=None, help="Dropout rate for rnn cells.")
+parser.add_argument("--dropout_lin", type=float, default=None, help="Dropout rate for linear layers.")
 parser.add_argument("--exp_decay", type=float, default=None, help="Decay rate.")
 parser.add_argument("--bi", action="store_true", help="Use bidirectional encoder.")
 parser.add_argument("--l2", type=float, default=0.0, help="l2 regularization parameter")
@@ -339,6 +340,7 @@ def get_seq2seq_config(args):
     config["weight_sharing_rnn"] = args.weight_sharing_rnn
     config['epsilon'] = args.epsilon
     config['dropout'] = args.dropout
+    config['dropout_lin'] = args.dropout_lin
     config['exp_decay'] = args.exp_decay
     config['bi'] = args.bi
     config["l2"] = args.l2
