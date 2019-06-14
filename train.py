@@ -246,6 +246,7 @@ def get_dummy_config(args):
     config["standardization"] = args.stand
     config["num_rnn_layers"] = args.num_rnn_layers
     config["l2"] = args.l2
+    config["num_epochs"] = args.num_epochs
 
     model_cls = models.DummyModel
 
@@ -291,6 +292,7 @@ def get_zero_velocity_model_config(args):
     config["activation_input"] = args.activation_input
     config["to_angles"] = args.to_angles
     config["standardization"] = args.stand
+    config["num_epochs"] = args.num_epochs
 
     model_cls = models.ZeroVelocityModel
 
@@ -351,6 +353,7 @@ def get_seq2seq_config(args):
     config['bi'] = args.bi
     config["l2"] = args.l2
     config['cell_size_disc'] = args.cell_size_disc
+    config["num_epochs"] = args.num_epochs
 
     model_cls = models.Seq2seq
 
