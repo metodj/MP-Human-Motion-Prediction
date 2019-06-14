@@ -8,14 +8,14 @@ This README file contains information on replication of results presented in the
 necessary pre-processing and later training and evaluation steps. In addition, it describes the modeling framework, which
 is designed to build a family of human motion prediction models. 
 
-### Data
+#### Data
 
 Let's assume that provided human motion dataset is stored under the directory ```./data/```, which contains training,
 validation and test poses in child directories ```training/```, ```validation/``` and ```test/```. If running on Leonhard
 Cluster, then this directory should be replaced by ```/cluster/project/infk/hilliges/lectures/mp19/project4 ```.
 
 
-### Data Preprocessing
+#### Data Preprocessing
 
 Originally, human body is represented as a set of 15 three-dimensional rotation matrices, flattened into a one-dimensional
 vector. Rotations can be expressed also in the form of angle-axis representation. In this regard, data should be pre-processed
@@ -36,7 +36,7 @@ python angles_stats.py
 --read_dir ./data_angles/training/
 ```
 
-## Model Parameters
+#### Model Parameters
 
 Default parameters.
 
@@ -64,10 +64,10 @@ python train.py
 --stand False  # enable standardization of features
 
 --model_type seq2seq  # seq2seq or zero_velocity
---cell_type  # RNN cell type
---cell_size  # RNN hidden size in s2s
---cell_size_disc  # RNN hidden size in GAN discriminators
---input_hidden_size 256  # input dense layer size
+--cell_type lstm # RNN cell type
+--cell_size 256 # RNN hidden size in s2s
+--cell_size_disc 256 # RNN hidden size in GAN discriminators
+--input_hidden_size None  # input dense layer size
 --activation_input None  # input dense layer activation function
 --activation_fn None  # output dense layer activation fuction
 --residuals False  # enable residual connection
@@ -88,4 +88,63 @@ python train.py
 --exp_decay None  # learning rate decay
 ```
 
-Code was adopted from Manuel Kaufmann, Emre Aksan.
+### Results
+
+#### On Human Motion Prediction using Recurrent Neural Networks
+
+Replication of model from paper: seq2seq with residual connections and sampling loss.
+
+```
+python train.py
+--data_dir ./data_angles/
+--experiment_name martinez
+
+--loss mse
+--learning_rate 0.005
+--batch_size 16
+--num_epochs 50
+
+--to_angles
+
+--model_type seq2seq 
+--cell_type gru
+--cell_size  1024
+--input_hidden_size None  # input dense layer size
+--residuals  # enable residual connection
+--samp_loss  # enable sampling loss
+--weight_sharing_rnn
+```
+
+#### Adversarial Geometry-Aware Human Motion Prediction
+
+Replication of model from paper: seq2seq with geodesic loss, residual connections, sampling loss and fidelity and 
+continuity discriminators.
+```
+python train.py
+--data_dir ./data_angles/
+--experiment_name aged
+
+--loss geo
+--learning_rate 0.005
+--batch_size 16
+--num_epochs 50
+
+--to_angles
+
+--model_type seq2seq 
+--cell_type gru
+--cell_size  1024
+--input_hidden_size 1024  # input dense layer size
+--residuals
+--samp_loss
+--weight_sharing_rnn
+
+--fidelity
+--continuity
+--lambda 0.6
+```
+
+
+
+
+Code was adopted from Manuel Kaufmann, Emre Aksan of AIT Lab, ETH Zurich.
