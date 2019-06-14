@@ -6,7 +6,7 @@ import time
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--read_dir', required=True, default='C:/Users/roksi/data/', help='Where the tfrecords are stored.')
+parser.add_argument('--read_dir', required=True, default='./data/', help='Where the tfrecords are stored.')
 ARGS = parser.parse_args()
 
 
@@ -53,6 +53,7 @@ if __name__ == '__main__':
     tf.enable_eager_execution()
 
     data_path = ARGS.read_dir
+    print(data_path)
 
     if not os.path.exists(data_path):
         raise ValueError("Specified path does not exist!")
@@ -82,8 +83,8 @@ if __name__ == '__main__':
     min_lens = min(lens)
     max_lens = max(lens)
 
-    stats = dict(mean_channel=means, mean_all=mean_, var_channel=vars, var_all=var_, \
-             min_all=min_, max_all=max_, min_seq_len=min_lens, max_seq_len=max_lens, num_samples=nr_samples)
+    stats = dict(mean_channel=means, mean_all=mean_, var_channel=vars, var_all=var_,
+                 min_all=min_, max_all=max_, min_seq_len=min_lens, max_seq_len=max_lens, num_samples=nr_samples)
 
     np.savez(data_path + 'stats', stats=stats)
 
