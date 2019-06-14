@@ -137,6 +137,7 @@ python train.py
 --input_hidden_size 1024  # input dense layer size
 --residuals
 --samp_loss
+--weight_sharing
 --weight_sharing_rnn
 
 --fidelity
