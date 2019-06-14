@@ -918,8 +918,7 @@ class Seq2seq(BaseModel):
             self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params_gen),
                                                               global_step=self.global_step)
 
-            # only update discriminators every 2nd step, give generator more time to learn
-            if self.fidelity and self.global_step % 2 == 0:
+            if self.fidelity:
                 params_disc = [var for var in params if "continuity" in var.name or "fidelity" in var.name]
                 gradients_disc = tf.gradients(- (self.loss_fidelity + self.loss_continuity), params_disc)
                 clipped_gradients_disc, _ = tf.clip_by_global_norm(gradients_disc, self.max_gradient_norm)
