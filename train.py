@@ -247,6 +247,7 @@ def get_dummy_config(args):
     config["num_rnn_layers"] = args.num_rnn_layers
     config["l2"] = args.l2
     config["num_epochs"] = args.num_epochs
+    config['dropout_lin'] = args.dropout_lin
 
     model_cls = models.DummyModel
 
@@ -293,6 +294,7 @@ def get_zero_velocity_model_config(args):
     config["to_angles"] = args.to_angles
     config["standardization"] = args.stand
     config["num_epochs"] = args.num_epochs
+    config['dropout_lin'] = args.dropout_lin
 
     model_cls = models.ZeroVelocityModel
 

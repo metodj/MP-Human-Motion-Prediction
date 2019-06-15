@@ -44,7 +44,7 @@ class BaseModel(object):
 
         self.optimizer = self.config["optimizer"]
         self.loss = self.config["loss"]
-        self.max_gradient_norm = 5
+        self.max_gradient_norm = 5.0
 
         # standardization
         self.standardization = self.config["standardization"]
@@ -105,7 +105,7 @@ class BaseModel(object):
                 # Geodesic loss
                 if self.to_angles:
                     self.loss = geodesic_distance(angle_axis_to_rot_mats(targets_pose),
-                                              angle_axis_to_rot_mats(predictions_pose))
+                                                  angle_axis_to_rot_mats(predictions_pose))
                 else:
                     self.loss = geodesic_distance(targets_pose, predictions_pose)
             else:
@@ -349,9 +349,9 @@ class DummyModel(BaseModel):
         batch = session.run(self.data_placeholders)
         data_id = batch[C.BATCH_ID]
         data_sample = batch[C.BATCH_INPUT]
-        targets = data_sample[:, self.source_seq_len:]  # train (16, 24, 45/135) / test (16, 0, 45/135)
+        targets = data_sample[:, self.source_seq_len:, :]  # train (16, 24, 45/135) / test (16, 0, 45/135)
 
-        seed_sequence = data_sample[:, :self.source_seq_len]
+        seed_sequence = data_sample[:, :self.source_seq_len, :]
 
         predictions = self.sample(session,
                                   seed_sequence,
@@ -362,10 +362,6 @@ class DummyModel(BaseModel):
                 targets = angle_axis_to_rot_mats_cv2(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
             predictions = angle_axis_to_rot_mats_cv2(predictions)  # (16, 24, 135)
-
-        # if self.standardization:
-        #     predictions = (predictions * self.vars) + self.means
-        #     targets = (targets * self.vars) + self.means
 
         return predictions, targets, seed_sequence, data_id
 
@@ -425,11 +421,6 @@ class ZeroVelocityModel(BaseModel):
     def __init__(self, config, data_pl, mode, reuse, **kwargs):
         super(ZeroVelocityModel, self).__init__(config, data_pl, mode, reuse, **kwargs)
 
-        # Extract some config parameters specific to this model
-        self.cell_type = self.config["cell_type"]
-        self.cell_size = self.config["cell_size"]
-        self.input_hidden_size = self.config.get("input_hidden_size")
-
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. Defined in build_cell.
         self.initial_states = None  # The intial states of the RNN. Defined in build_network.
@@ -480,7 +471,6 @@ class ZeroVelocityModel(BaseModel):
 
     def build_loss(self):
         self.loss = tf.constant(0)
-        print("loss", self.loss.get_shape())
 
     def step(self, session):
         """
@@ -498,7 +488,6 @@ class ZeroVelocityModel(BaseModel):
             outputs = session.run(output_feed)
             return outputs[0], outputs[1], outputs[2]
         else:
-            # Evaluation step (no backprop).
             output_feed = [self.loss,
                            self.summary_update,
                            self.outputs]
@@ -617,20 +606,20 @@ class Seq2seq(BaseModel):
         # Prepare some members that need to be set when creating the graph.
         self.cell = None  # The recurrent cell. (encoder)
         self.cell_decoder = None # The decoder cell.
-        self.initial_states = None  # The intial states of the RNN.
-        self.initial_states_decoder = None # The decoder initial state.
+        self.initial_states = None  # The initial states of the RNN.
+        self.initial_states_decoder = None  # The decoder initial state.
         self.rnn_outputs = None  # The outputs of the RNN layer.
         self.rnn_state = None  # The final state of the RNN layer.
         self.rnn_state_decoder = None
-        self.inputs_hidden_encoder = None # The inputs to the encoder
+        self.inputs_hidden_encoder = None  # The inputs to the encoder
         self.inputs_hidden = None  # The inputs to the decoder
-        self.decoder_output_dense = None # Decoder output layer in case of sampling loss
-        self.decoder_input_dense = None # Decoder input layer in case of sampling loss
+        self.decoder_output_dense = None  # Decoder output layer in case of sampling loss
+        self.decoder_input_dense = None  # Decoder input layer in case of sampling loss
 
         self.output_decoder_sampl_loss = None  # for more efficient predicting in case sampling loss
 
         # Fidelity discriminator
-        self.fidelity_linear = None # Fidelity linear layer reference
+        self.fidelity_linear = None
         self.inputs_hidden_fid_tar = None
         self.inputs_hidden_fid_pred = None
         self.cell_fidelity = None
@@ -643,7 +632,7 @@ class Seq2seq(BaseModel):
         self.loss_fidelity = None
 
         # continuity discriminator
-        self.continuity_linear = None # continuity linear layer reference
+        self.continuity_linear = None
         self.inputs_hidden_con_tar = None
         self.inputs_hidden_con_pred = None
         self.cell_continuity = None
@@ -659,10 +648,12 @@ class Seq2seq(BaseModel):
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
 
-        self.inputs_encoder = self.data_inputs[:, :self.source_seq_len-1, :]  # 0:119 -> 119 frames (seed without last)
+        self.inputs_encoder = self.data_inputs[:, :self.source_seq_len-1, :]  # (16, 119, 135)
+        # 0:119 -> 119 frames (seed without last)
 
         if not self.sampling_loss:
-            self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1:-1, :]  # 119:143 -> 24 frames (without last)
+            self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1:-1, :]  # (16, 24, 135)
+            # 119:143 -> 24 frames (without last)
         else:
             self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1, :]  # (16, 135) (last seed frame)
 
@@ -673,10 +664,8 @@ class Seq2seq(BaseModel):
         self.prediction_seq_len_encoder = tf.ones((tf.shape(self.inputs_encoder)[0]),
                                                   dtype=tf.int32)*(self.source_seq_len-1)  # [119, ..., 119]
 
-        # Sometimes the batch size is available at compile time.
         self.tf_batch_size = self.inputs_encoder.shape.as_list()[0]
         if self.tf_batch_size is None:
-            # Sometimes it isn't. Use the dynamic shape instead.
             self.tf_batch_size = tf.shape(self.inputs_encoder)[0]
 
     def build_input_layer(self):
@@ -686,7 +675,7 @@ class Seq2seq(BaseModel):
         """
         # We could e.g. pass them through a dense layer
         if self.input_hidden_size is not None:
-            if self.weight_sharing == "w/o": # no weight sharing in linear layer between encoder and decoder
+            if self.weight_sharing == "w/o":  # no weight sharing in linear layer between encoder and decoder
                 if not self.sampling_loss:
                     with tf.variable_scope("input_layer_decoder", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden = tf.layers.dense(self.prediction_inputs, self.input_hidden_size,
@@ -699,7 +688,8 @@ class Seq2seq(BaseModel):
                     self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                  activation=self.activation_fn_in, reuse=self.reuse)
                     if self.dropout_lin:
-                        self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout_lin,
+                        self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder,
+                                                                       rate=self.dropout_lin,
                                                                        training=not self.reuse)
 
             else:  # weight sharing between encoder and decoder only (s2s), or between all (all)
@@ -715,16 +705,18 @@ class Seq2seq(BaseModel):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in)
                         if self.dropout_lin:
-                            self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout_lin,
-                                                                          training=not self.reuse)
+                            self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder,
+                                                                           rate=self.dropout_lin,
+                                                                           training=not self.reuse)
                 else:
                     with tf.variable_scope("input_layer_shared", reuse=self.reuse, regularizer=self.regularizer):
                         self.inputs_hidden_encoder = tf.layers.dense(self.inputs_encoder, self.input_hidden_size,
                                                                      activation=self.activation_fn_in, reuse=self.reuse)
 
                         if self.dropout_lin:
-                            self.inputs_hidden_encoder= tf.layers.dropout(self.inputs_hidden_encoder, rate=self.dropout_lin,
-                                                                          training=not self.reuse)
+                            self.inputs_hidden_encoder = tf.layers.dropout(self.inputs_hidden_encoder,
+                                                                           rate=self.dropout_lin,
+                                                                           training=not self.reuse)
 
         else:
             self.inputs_hidden = self.prediction_inputs
@@ -1089,14 +1081,16 @@ class Seq2seq(BaseModel):
                                self.summary_update,
                                self.outputs,
                                self.parameter_update,
-                               self.global_step
+                               self.global_step,
+                               self.prediction_inputs,
+                               self.prediction_targets,
+                               self.inputs_encoder
                                ]
-
                 outputs = session.run(output_feed)
-                # print("loss", outputs[0], "l2_loss", outputs[5], "p_loss", outputs[0] - outputs[5])
-                # print(outputs[4].c.shape)
-                # print("global_step", outputs[5])
-                # print("learning_rate", outputs[4])
+                # print("prediction_inputs", outputs[5].shape)
+                # print("prediction_targets", outputs[6].shape)
+                # print("inputs_encoder", outputs[7].shape)
+
                 return outputs[0], outputs[1], outputs[2]
             else:
                 # Update all
@@ -1110,17 +1104,9 @@ class Seq2seq(BaseModel):
                                self.global_step,
                                ]
                 outputs = session.run(output_feed)
-
-                # if outputs[7] % 20:
-                #     print("loss", outputs[0])
-                #     print("loss_fidelity", outputs[5])
-                #     print("loss_continuity", outputs[6])
-                #     print("loss_predictor", outputs[0] - self.lambda_*(outputs[6] + outputs[5]))
-
                 return outputs[0], outputs[1], outputs[2]
 
         else:
-            # Evaluation step (no backprop).
             output_feed = [self.loss,
                            self.summary_update,
                            self.outputs]
