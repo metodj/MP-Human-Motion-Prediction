@@ -1157,6 +1157,7 @@ class Seq2seq(BaseModel):
                 targets = angle_axis_to_rot_mats_cv2(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
             predictions = angle_axis_to_rot_mats_cv2(predictions)  # (16, 24, 135)
+            seed_sequence = angle_axis_to_rot_mats(seed_sequence)
         else:
             batch_size = predictions.shape[0]
             seq_length = predictions.shape[1]

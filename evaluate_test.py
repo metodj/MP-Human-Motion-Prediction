@@ -65,7 +65,8 @@ def create_and_restore_test_model(session, experiment_dir, args):
                                           extract_windows_of=window_length,
                                           extract_random_windows=False,
                                           num_parallel_calls=16,
-                                          to_angles=config["to_angles"])
+                                          to_angles=config["to_angles"],
+                                          standardization = config['standardization'])
         test_pl = test_data.get_tf_samples()
 
     # Select the type of model we want to use.
@@ -86,7 +87,10 @@ def create_and_restore_test_model(session, experiment_dir, args):
             mode=C.EVAL,
             reuse=False,
             dtype=tf.float32,
-            is_test=True)
+            is_test=True,
+            means=test_data.mean_channel,
+            vars=test_data.var_channel,
+            standardization=config['standardization'])
         test_model.build_graph()
 
     # Count number of trainable parameters.
@@ -110,10 +114,10 @@ def create_and_restore_test_model(session, experiment_dir, args):
         else:
             raise ValueError("could not load checkpoint")
 
-    return test_model, test_data, config
+    return test_model, test_data, config, test_data.mean_channel, test_data.var_channel
 
 
-def evaluate_model(sess, eval_model, eval_data):
+def evaluate_model(sess, eval_model, eval_data, means, vars):
     """
     Make a full pass on the test set and return the results.
     Args:
@@ -135,6 +139,9 @@ def evaluate_model(sess, eval_model, eval_data):
             # as there is no ground-truth for the test set.
             prediction, seed_sequence, data_id = eval_model.predict(sess)
 
+            # only denormalize seed, predictions are already denormalized if sampled_step function!
+            seed_sequence = seed_sequence * np.sqrt(vars) + means
+
             # Store each test sample and corresponding predictions with the unique sample IDs.
             for i in range(prediction.shape[0]):
                 eval_result[data_id[i].decode("utf-8")] = (prediction[i], seed_sequence[i])
@@ -153,10 +160,10 @@ def evaluate(experiment_dir, args):
     """
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9, allow_growth=True)
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-        test_model, test_data, config = create_and_restore_test_model(sess, experiment_dir, args)
+        test_model, test_data, config, means, vars = create_and_restore_test_model(sess, experiment_dir, args)
 
         print("Evaluating test set ...")
-        eval_result = evaluate_model(sess, test_model, test_data)
+        eval_result = evaluate_model(sess, test_model, test_data, means, vars)
 
         if args.export:
             # Export the results into a csv file that can be submitted.
@@ -199,7 +206,7 @@ if __name__ == '__main__':
         sys.stdout = open(LOG_FILE, "w")
 
     try:
-        experiment_dir = glob.glob(os.path.join(args.save_dir, args.model_id + "-*"), recursive=False)[0]
+        experiment_dir = glob.glob(os.path.join(args.save_dir, args.model_id), recursive=False)[0]
     except IndexError:
         raise Exception("Model " + str(args.model_id) + " is not found in " + str(args.save_dir))
 
