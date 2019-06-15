@@ -4,7 +4,7 @@ import numpy as np
 import os
 import time
 import argparse
-from pp_utils import rot_mats_to_angle_axis, rot_mats_to_angle_axis_cv2
+from pp_utils import rot_mats_to_angle_axis_cv2
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--read_dir', required=True, default='C:/Users/roksi/data/', help='Where the tfrecords are stored.')
@@ -25,12 +25,11 @@ if not os.path.exists(os.path.join(ARGS.write_dir, "test")):
     os.makedirs(os.path.join(ARGS.write_dir, "test"))
 
 
-def read_tfrecords(tfrecords_path, nr=5, angles=True):
+def read_tfrecords(tfrecords_path, angles=True):
     """Read tfrecord file.
 
         Args:
             tfrecords_path: file path
-            nr: parameter for debugging
             angles: parameter for debugging, i.e. when reading newly written tf_records and comparing them with the
             previous ones
 
@@ -55,19 +54,11 @@ def read_tfrecords(tfrecords_path, nr=5, angles=True):
 
     iterator = tf_data.make_one_shot_iterator()
     samples = []
-    counter = 0
     for s in iterator:
         tmp = s["poses"].numpy()
         if angles:
-            # Own and map
-            # tmp = rot_mats_to_angle_axis(tmp)
-            # CV2 and for loop (2x faster)
             tmp = rot_mats_to_angle_axis_cv2(tmp)
-            # print(s["poses"].numpy().shape, tmp.shape)
         samples.append(tmp)
-        # if counter >= nr:
-        #     break
-        # counter += 1
 
     print(tfrecords_path + " read.")
     return samples
@@ -109,10 +100,8 @@ if __name__ == '__main__':
     data_path = ARGS.read_dir
     data_angles_path = ARGS.write_dir
 
-    print(data_path)
-    print(data_angles_path)
-
-    # IMPORTANT: code here assumes writing directory already exists!
+    if not os.path.exists(data_angles_path):
+        os.makedirs(data_angles_path)
 
     for file in os.listdir(data_path):
         filename = os.fsdecode(file)
@@ -125,19 +114,6 @@ if __name__ == '__main__':
                 samples = read_tfrecords(data_path_)
                 write_tfrecords(samples, data_angles_path_)
                 print("Elapsed time: ", time.time() - start)
-
-    # data_path = "./data/training/poses-00001-of-00016"
-    # data_angle_path = "./data_angles/training/poses-00001-of-00016"
-    #
-    # samples = read_tfrecords(data_path, 5)
-    # # for i in samples:
-    # #     print(i.shape)
-    # # print(len(samples))
-    #
-    # write_tfrecords(samples, data_angle_path)
-    #
-    # # samples2 = read_tfrecords(data_angle_path, 5 ,angles=False)
-    # # print(np.all(samples[3] == samples2[3]))
 
 
 
