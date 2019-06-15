@@ -78,8 +78,8 @@ python train.py
 --lambda 0.6  # weight for discriminator loss w.r.t. predictor loss
 
 --update_ckpt False  # only store model if eval loss was improved during current epoch
---weight_sharing w/o  # weight sharing between input dense layers, options: w/o (without), s2s (encode and decoder), all (endocer, decoder, discriminators)
---weight_sharing_rnn False  # weight sharing between encoder and decoder
+--weight_sharing w/o  # weight sharing between input dense layers, options: w/o (without), s2s (encoder, decoder), all (encoder, decoder, discriminators)
+--weight_sharing_rnn False  # weight sharing between encoder's and decoder's rnn cells
 --bi False  # enable bidirectional encoder
 --epsilon 0.00000001  # epsilon parameter for Adam optimizer
 --dropout None  # dropout rate for RNN cells
@@ -117,7 +117,7 @@ python train.py
 --residuals
 --samp_loss
 
---weight_sharing s2s  # weight sharing, options: w/o (?), s2s (seq2seq only), all
+--weight_sharing s2s 
 --weight_sharing_rnn
 --dropout 0.1
 ```
@@ -139,7 +139,7 @@ python train.py
 --num_epochs 50
 
 --to_angles
--- stand
+--stand
 
 --model_type seq2seq 
 --cell_type gru
