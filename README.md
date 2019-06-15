@@ -18,7 +18,7 @@ Cluster, then this directory should be replaced by ```/cluster/project/infk/hill
 #### Data Preprocessing
 
 Originally, human body is represented as a set of 15 three-dimensional rotation matrices, flattened into a one-dimensional
-vector. Rotations can be expressed also in the form of angle-axis representation. In this regard, data should be pre-processed
+vector. Rotations can be expressed also in the form of angle-axis representation (in the papers also referred to as exponential-map representation). In this regard, data should be pre-processed
 beforehand by running the following command, which will create a new directory ```./data_angles/``` containing human body
 represented as angle-axis representations.
 
@@ -78,7 +78,7 @@ python train.py
 --lambda 0.6  # weight for discriminator loss w.r.t. predictor loss
 
 --update_ckpt False  # only store model if eval loss was improved during current epoch
---weight_sharing w/o  # weight sharing, options: w/o (?), s2s (seq2seq only), all
+--weight_sharing w/o  # weight sharing between input dense layers, options: w/o (without), s2s (encode and decoder), all (endocer, decoder, discriminators)
 --weight_sharing_rnn False  # weight sharing between encoder and decoder
 --bi False  # enable bidirectional encoder
 --epsilon 0.00000001  # epsilon parameter for Adam optimizer
@@ -130,6 +130,7 @@ Replication of model from paper: seq2seq with residual connections and sampling 
 ```
 python train.py
 --data_dir ./data_angles/
+--save_dir ./experiments/ 
 --experiment_name martinez
 
 --loss mse
@@ -138,6 +139,7 @@ python train.py
 --num_epochs 50
 
 --to_angles
+-- stand
 
 --model_type seq2seq 
 --cell_type gru
@@ -155,6 +157,7 @@ continuity discriminators.
 ```
 python train.py
 --data_dir ./data_angles/
+--save_dir ./experiments/ 
 --experiment_name aged
 
 --loss geo
@@ -163,6 +166,7 @@ python train.py
 --num_epochs 50
 
 --to_angles
+--stand
 
 --model_type seq2seq 
 --cell_type gru
@@ -171,7 +175,6 @@ python train.py
 --residuals
 --samp_loss
 --weight_sharing w/o
---weight_sharing_rnn
 
 --fidelity
 --continuity
