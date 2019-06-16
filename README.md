@@ -94,17 +94,13 @@ python train.py
 
 ```
 python train.py
---use_cpu False
---log False  # create log file
-
 --data_dir ./data/
 --save_dir ./experiments/ 
 --experiment_name jazbec_sikonja
 
-
 --learning_rate 0.0005
 --batch_size 100
---num_epochs 100
+--num_epochs 150
 --print_every 100
 --loss geo
 
@@ -119,9 +115,10 @@ python train.py
 
 --weight_sharing s2s 
 --weight_sharing_rnn
---dropout 0.1
+--dropout 0.3
+--exp_decay 0.96
+--update_ckpt
 ```
-
 
 #### On Human Motion Prediction using Recurrent Neural Networks
 
@@ -178,7 +175,7 @@ python train.py
 
 --fidelity
 --continuity
---lambda 0.6
+--lambda_ 0.6
 ```
 
 
