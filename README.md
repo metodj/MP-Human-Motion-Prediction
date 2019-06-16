@@ -97,8 +97,8 @@ python train.py
 Public Score: 3.3002206364
 
 On Leonhard: 
-bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" 
-<sub><sup>python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_gru_multi --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt</sup></sub>
+<sub><sup>bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" 
+python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_gru_multi --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt</sup></sub>
 
 4-layer GRU with shared weights, input and RNN, between encoder and decoder.  
 
@@ -133,8 +133,8 @@ python train.py
 Public Score: 3.26915846818
 
 On Leonhard
-bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" 
-<sub><sup>python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seqseq --model_type seq2seq --log --cell_type lstm --input_hidden_size 1024 --cell_size 1024 --residuals --num_epochs 150 --learning_rate 0.0005 --weight_sharing s2s --weight_sharing_rnn --update_ckpt --stand --batch_size 100 --dropout 0.3 --exp_decay 0.96 --loss geo</sup></sub>
+<sub><sup>bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" 
+python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seqseq --model_type seq2seq --log --cell_type lstm --input_hidden_size 1024 --cell_size 1024 --residuals --num_epochs 150 --learning_rate 0.0005 --weight_sharing s2s --weight_sharing_rnn --update_ckpt --stand --batch_size 100 --dropout 0.3 --exp_decay 0.96 --loss geo</sup></sub>
 
 
 ```
