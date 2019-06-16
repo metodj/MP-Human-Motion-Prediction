@@ -26,6 +26,7 @@ from utils import export_results
 from utils import export_code
 from visualize import Visualizer
 from fk import SMPLForwardKinematics
+from pp_utils import angle_axis_to_rot_mats_cv2, angle_axis_to_rot_mats
 
 
 tf.logging.set_verbosity(tf.logging.ERROR)
@@ -114,10 +115,10 @@ def create_and_restore_test_model(session, experiment_dir, args):
         else:
             raise ValueError("could not load checkpoint")
 
-    return test_model, test_data, config, test_data.mean_channel, test_data.var_channel
+    return test_model, test_data, config, test_data.mean_channel, test_data.var_channel, test_data.standardization
 
 
-def evaluate_model(sess, eval_model, eval_data, means, vars):
+def evaluate_model(sess, eval_model, eval_data, means, vars, stand):
     """
     Make a full pass on the test set and return the results.
     Args:
@@ -139,8 +140,9 @@ def evaluate_model(sess, eval_model, eval_data, means, vars):
             # as there is no ground-truth for the test set.
             prediction, seed_sequence, data_id = eval_model.predict(sess)
 
-            # only denormalize seed, predictions are already denormalized if sampled_step function!
-            seed_sequence = seed_sequence * np.sqrt(vars) + means
+            # only denormalize seed, predictions are already denormalized in sampled_step function!
+            if stand:
+                seed_sequence = seed_sequence * np.sqrt(vars) + means
 
             # Store each test sample and corresponding predictions with the unique sample IDs.
             for i in range(prediction.shape[0]):
@@ -160,10 +162,10 @@ def evaluate(experiment_dir, args):
     """
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.9, allow_growth=True)
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-        test_model, test_data, config, means, vars = create_and_restore_test_model(sess, experiment_dir, args)
+        test_model, test_data, config, means, vars, stand = create_and_restore_test_model(sess, experiment_dir, args)
 
         print("Evaluating test set ...")
-        eval_result = evaluate_model(sess, test_model, test_data, means, vars)
+        eval_result = evaluate_model(sess, test_model, test_data, means, vars, stand)
 
         if args.export:
             # Export the results into a csv file that can be submitted.
