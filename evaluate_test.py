@@ -206,7 +206,7 @@ if __name__ == '__main__':
         sys.stdout = open(LOG_FILE, "w")
 
     try:
-        experiment_dir = glob.glob(os.path.join(args.save_dir, args.model_id), recursive=False)[0]
+        experiment_dir = glob.glob(os.path.join(args.save_dir, args.model_id + "-*"), recursive=False)[0]
     except IndexError:
         raise Exception("Model " + str(args.model_id) + " is not found in " + str(args.save_dir))
 

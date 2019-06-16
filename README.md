@@ -92,31 +92,31 @@ python train.py
 
 #### Our Model
 
+On Leonhard: bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_gru_multi --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt
+
 ```
-python train.py
+python train.py 
+--log
 --data_dir ./data/
---save_dir ./experiments/ 
---experiment_name jazbec_sikonja
-
---learning_rate 0.0005
---batch_size 100
---num_epochs 150
---print_every 100
---loss geo
-
---stand
-
+--save_dir ./experiments 
+--experiment_name seq2seq_gru_multi 
 --model_type seq2seq
---cell_type lstm
---cell_size 1024
---input_hidden_size 1024
---residuals
---samp_loss
 
+--stand 
+--batch_size 100 
+
+--cell_type gru 
+--num_rnn_layers 4 
+--input_hidden_size 512 
+--cell_size 512 
+--residuals 
+--loss geo 
+--num_epochs 150 
+--learning_rate 0.0005 
+--dropout 0.3 
+--exp_decay 0.96  
+--weight_sharing_rnn 
 --weight_sharing s2s 
---weight_sharing_rnn
---dropout 0.3
---exp_decay 0.96
 --update_ckpt
 ```
 
@@ -178,7 +178,12 @@ python train.py
 --lambda_ 0.6
 ```
 
+####
 
+bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_karolis --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt
+
+
+bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seqseq --model_type seq2seq --log --cell_type lstm --input_hidden_size 1024 --cell_size 1024 --residuals --num_epochs 150 --learning_rate 0.0005 --weight_sharing s2s --weight_sharing_rnn --update_ckpt --stand --batch_size 100 --dropout 0.3 --exp_decay 0.96
 
 
 Code was adopted from Manuel Kaufmann, Emre Aksan of AIT Lab, ETH Zurich.
