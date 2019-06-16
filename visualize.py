@@ -19,6 +19,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from motion_metrics import get_closest_rotmat
 from motion_metrics import is_valid_rotmat
 
+np.random.seed(0)
+
 
 _prop_cycle = plt.rcParams['axes.prop_cycle']
 _colors = _prop_cycle.by_key()['color']
@@ -278,7 +280,7 @@ def save_animation(fig, seq_length, update_func, update_func_args, video_path,
     shutil.rmtree(tmp_path, ignore_errors=True)
 
 
-def _get_random_sample(tfrecords_path, n_samples=10):
+def _get_random_sample(tfrecords_path, means, vars, n_samples=10):
     """Return `n_samples` many random samples from the tfrecords found unter `tfrecords_path`."""
 
     def _parse_tf_example(proto):
@@ -302,6 +304,9 @@ def _get_random_sample(tfrecords_path, n_samples=10):
     for s in iterator:
         if counter >= n_samples:
             break
+        # stand = (s["poses"].numpy()-means)/np.sqrt(vars)
+        # destand = stand*np.sqrt(vars)+means
+        # samples.append(destand)
         samples.append(s["poses"].numpy())
         counter += 1
 
@@ -317,11 +322,14 @@ if __name__ == '__main__':
     tf.enable_eager_execution()
 
     # Where the data is stored.
-    data_path = "./data/validation/poses-?????-of-?????"
+    data_path = "./data/test/poses-?????-of-?????"
     # data_path = "/cluster/project/infk/hilliges/lectures/mp19/project4/validation/poses-?????-of-?????"
 
+    meta_data_path = "./data/training/stats.npz"
+    meta = np.load(meta_data_path, allow_pickle=True)['stats'].tolist()
+
     # Get some random samples.
-    samples = _get_random_sample(data_path, n_samples=5)
+    samples = _get_random_sample(data_path, meta["mean_channel"], meta["var_channel"], n_samples=5)
 
     video_path = None
     # If we set the video path, the animations will be saved to video instead of shown interactively.

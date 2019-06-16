@@ -64,6 +64,8 @@ class BaseModel(object):
         self.loss_continuity = None
         self.loss_fidelity = None
         self.fidelity = None
+        self.gradients_visual = 1
+        self.gradients_visual_disc = 1
 
         self.to_angles = self.config["to_angles"]
         self.dropout_lin = self.config['dropout_lin']
@@ -146,9 +148,12 @@ class BaseModel(object):
         # Note that summary_routines are called outside of the self.mode name_scope. Hence, self.mode should be
         # prepended to the summary name if needed.
         tf.summary.scalar(self.mode+"/loss", self.loss, collections=[self.mode+"/model_summary"])
+        tf.summary.scalar(self.mode+"/gradients", self.gradients_visual, collections=[self.mode+"/model_summary"])
+
         if self.fidelity:
             tf.summary.scalar(self.mode + "/loss_continuity", self.loss_continuity, collections=[self.mode + "/model_summary"])
             tf.summary.scalar(self.mode + "/loss_fidelity", self.loss_fidelity, collections=[self.mode + "/model_summary"])
+            tf.summary.scalar(self.mode + "/gradients_disc", self.gradients_visual_disc, collections=[self.mode + "/model_summary"])
 
         if self.is_training:
             tf.summary.scalar(self.mode + "/learning_rate",
@@ -921,6 +926,10 @@ class Seq2seq(BaseModel):
 
             params_gen = [var for var in params if not "continuity" in var.name and not "fidelity" in var.name]
             gradients = tf.gradients(self.loss, params_gen)
+
+            # GRADIENT VISUALIZATION
+            self.gradients_visual = tf.global_norm(gradients)
+
             # In case you want to do anything to the gradients, here you could do it.
             clipped_gradients, _ = tf.clip_by_global_norm(gradients, self.max_gradient_norm)
             self.parameter_update = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients, params_gen),
@@ -929,6 +938,10 @@ class Seq2seq(BaseModel):
             if self.fidelity:
                 params_disc = [var for var in params if "continuity" in var.name or "fidelity" in var.name]
                 gradients_disc = tf.gradients(- (self.loss_fidelity + self.loss_continuity), params_disc)
+
+                # GRADIENT VISUALIZATION
+                self.gradients_visual_disc = tf.global_norm(gradients_disc)
+
                 clipped_gradients_disc, _ = tf.clip_by_global_norm(gradients_disc, self.max_gradient_norm)
                 self.parameter_update_disc = optimizer.apply_gradients(grads_and_vars=zip(clipped_gradients_disc,
                                                                                           params_disc))
@@ -1161,6 +1174,7 @@ class Seq2seq(BaseModel):
                 targets = angle_axis_to_rot_mats_cv2(targets)  # train (16, 24, 135) / test (16, 24, 135)
 
             predictions = angle_axis_to_rot_mats_cv2(predictions)  # (16, 24, 135)
+            seed_sequence = angle_axis_to_rot_mats(seed_sequence)
         else:
             batch_size = predictions.shape[0]
             seq_length = predictions.shape[1]
