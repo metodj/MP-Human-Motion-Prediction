@@ -653,29 +653,12 @@ class Seq2seq(BaseModel):
         # How many steps we must predict.
         self.sequence_length = self.target_seq_len
 
-        # self.inputs_encoder = self.data_inputs[:, :self.source_seq_len-1, :]  # (16, 119, 135)
-        # # 0:119 -> 119 frames (seed without last)
-        #
-        # if not self.sampling_loss:
-        #     self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1:-1, :]  # (16, 24, 135)
-        #     # 119:143 -> 24 frames (without last)
-        # else:
-        #     self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1, :]  # (16, 135) (last seed frame)
-        #
-        # self.prediction_targets = self.data_inputs[:, self.source_seq_len:, :]  # 120:144 -> 24 frames (last)
-        #
-        # self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]),
-        #                                   dtype=tf.int32)*self.sequence_length  # [24, ..., 24]
-        # self.prediction_seq_len_encoder = tf.ones((tf.shape(self.inputs_encoder)[0]),
-        #                                           dtype=tf.int32)*(self.source_seq_len-1)  # [119, ..., 119]
-
-        # NEWWW
-        self.inputs_encoder = self.data_inputs[:, :self.source_seq_len, :]  # (16, 120, 135)
-        # 0:120 -> 120 frames (seed) 1, ..., 120
+        self.inputs_encoder = self.data_inputs[:, :self.source_seq_len-1, :]  # (16, 119, 135)
+        # 0:119 -> 119 frames (seed without last)
 
         if not self.sampling_loss:
             self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1:-1, :]  # (16, 24, 135)
-            # 119:143 -> 24 frames (without last) 120, ..., 143
+            # 119:143 -> 24 frames (without last)
         else:
             self.prediction_inputs = self.data_inputs[:, self.source_seq_len-1, :]  # (16, 135) (last seed frame)
 
@@ -684,7 +667,7 @@ class Seq2seq(BaseModel):
         self.prediction_seq_len = tf.ones((tf.shape(self.prediction_targets)[0]),
                                           dtype=tf.int32)*self.sequence_length  # [24, ..., 24]
         self.prediction_seq_len_encoder = tf.ones((tf.shape(self.inputs_encoder)[0]),
-                                                  dtype=tf.int32) * self.source_seq_len  # [119, ..., 119]
+                                                  dtype=tf.int32)*(self.source_seq_len-1)  # [119, ..., 119]
 
         self.tf_batch_size = self.inputs_encoder.shape.as_list()[0]
         if self.tf_batch_size is None:
