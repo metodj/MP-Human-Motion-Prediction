@@ -680,7 +680,7 @@ class Seq2seq(BaseModel):
                                           dtype=tf.int32)*self.sequence_length  # [24, ..., 24]
         self.prediction_seq_len_encoder = tf.ones((tf.shape(self.inputs_encoder)[0]),
                                                   dtype=tf.int32) * self.source_seq_len  # [119, ..., 119]
-        
+
         self.tf_batch_size = self.inputs_encoder.shape.as_list()[0]
         if self.tf_batch_size is None:
             self.tf_batch_size = tf.shape(self.inputs_encoder)[0]
