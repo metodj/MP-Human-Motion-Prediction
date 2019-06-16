@@ -90,9 +90,15 @@ python train.py
 
 ### Results
 
-#### Our Model
+#### Our Models
 
-On Leonhard: bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_gru_multi --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt
+##### 4LR-GRU SEQ2SEQ RES STAND GEO 512/512
+
+Public Score: 3.3002206364
+
+On Leonhard: 
+bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" 
+<sub><sup>python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_gru_multi --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt</sup></sub>
 
 4-layer GRU with shared weights, input and RNN, between encoder and decoder.  
 
@@ -122,7 +128,38 @@ python train.py
 --update_ckpt
 ```
 
+##### SEQ2SEQ 1024/1024 LSTM RES GEO STAND
 
+Public Score: 3.26915846818
+
+On Leonhard
+bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" 
+<sub><sup>python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seqseq --model_type seq2seq --log --cell_type lstm --input_hidden_size 1024 --cell_size 1024 --residuals --num_epochs 150 --learning_rate 0.0005 --weight_sharing s2s --weight_sharing_rnn --update_ckpt --stand --batch_size 100 --dropout 0.3 --exp_decay 0.96 --loss geo</sup></sub>
+
+
+```
+python train.py 
+--log
+--data_dir ./data/ 
+--save_dir ./experiments 
+--experiment_name seqseq 
+--model_type seq2seq
+
+--loss geo   
+--cell_type lstm 
+--input_hidden_size 1024 
+--cell_size 1024 
+--residuals 
+--num_epochs 150 
+--learning_rate 0.0005 
+--weight_sharing s2s 
+--weight_sharing_rnn 
+--update_ckpt 
+--stand 
+--batch_size 100 
+--dropout 0.3 
+--exp_decay 0.96
+```
 
 
 #### On Human Motion Prediction using Recurrent Neural Networks
@@ -185,13 +222,10 @@ python train.py
 
 ####
 
-bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_karolis --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt
-
-bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seq2seq_karolis --model_type seq2seq --batch_size 100 --log --cell_type gru --num_rnn_layers 4 --input_hidden_size 512 --cell_size 512 --residuals --loss geo --num_epochs 150 --learning_rate 0.0005 --dropout 0.3 --exp_decay 0.96 --stand --weight_sharing_rnn --weight_sharing s2s --update_ckpt
 
 
 
-bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seqseq --model_type seq2seq --log --cell_type lstm --input_hidden_size 1024 --cell_size 1024 --residuals --num_epochs 150 --learning_rate 0.0005 --weight_sharing s2s --weight_sharing_rnn --update_ckpt --stand --batch_size 100 --dropout 0.3 --exp_decay 0.96
 
 
-Code was adopted from Manuel Kaufmann, Emre Aksan of AIT Lab, ETH Zurich.
+
+<sub>Code was adopted from Manuel Kaufmann and Emre Aksan of AIT Lab, ETH Zurich.</sub>
