@@ -161,6 +161,41 @@ python train.py
 --exp_decay 0.96
 ```
 
+##### AGED 1LR-LSTM 1024(s2s) 256(disc) GEO
+
+Public Score: 3.54183614183
+
+On Leonhard
+<sub><sup>bsub -n 6 -W 4:00 -R "rusage[mem=2048, ngpus_excl_p=1]" 
+python train.py --data_dir /cluster/project/infk/hilliges/lectures/mp19/project4 --save_dir ./experiments --experiment_name seqseq_aged --model_type seq2seq --log --cell_type lstm --input_hidden_size 1024 --cell_size 1024 --residuals --num_epochs 100 --learning_rate 0.0005 --samp_loss --weight_sharing all --weight_sharing_rnn --update_ckpt --fidelity --continuity
+
+
+
+```
+python train.py 
+--log
+--data_dir ./data/ 
+--save_dir ./experiments 
+--experiment_name seqseq_aged 
+--model_type seq2seq
+
+--log 
+--cell_type lstm 
+--input_hidden_size 1024 
+--cell_size 1024 
+--cell_size_disc 256
+--residuals 
+--num_epochs 100 
+--learning_rate 0.0005 
+--samp_loss 
+--weight_sharing all 
+--weight_sharing_rnn 
+--update_ckpt 
+--fidelity 
+--continuity
+
+```
+
 
 #### On Human Motion Prediction using Recurrent Neural Networks
 
