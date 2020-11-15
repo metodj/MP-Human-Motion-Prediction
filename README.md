@@ -4,6 +4,8 @@ Machine Perception, Spring 2019 ETH Zürich.
 
 Project authors are Metod Jazbec and Rok Šikonja.
 
+Project report can be found [here](https://github.com/metodj/MP-Human-Motion-Prediction/blob/master/Machine_Perception_Project_Report.pdf).
+
 This README file contains information on replication of results presented in the paper. It should guide the reader through
 necessary pre-processing and later training and evaluation steps. In addition, it describes the modeling framework, which
 is designed to build a family of human motion prediction models. 
